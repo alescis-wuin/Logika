@@ -53,17 +53,17 @@ public final class CircuitComponent {
 
         if (kind == ComponentKind.NAND) {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "A",
-                    new Vec2(b.x(), b.y() + b.height() * 0.34)));
+                    new Vec2(b.x(), b.y() + b.height() * 0.38)));
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 1), "B",
-                    new Vec2(b.x(), b.y() + b.height() * 0.66)));
+                    new Vec2(b.x(), b.y() + b.height() * 0.70)));
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)));
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.54)));
         } else if (kind == ComponentKind.LED) {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "IN",
-                    new Vec2(b.x(), b.y() + b.height() * 0.5)));
+                    new Vec2(b.x(), b.y() + b.height() * 0.58)));
         } else {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)));
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.58)));
         }
 
         return pins;
@@ -108,17 +108,5 @@ public final class CircuitComponent {
         for (int i = 0; i < inputs.length; i++) {
             inputs[i] = false;
         }
-    }
-
-    public String valueLabel() {
-        return switch (kind) {
-            case NAND -> "A=" + bit(inputs[0]) + "  B=" + bit(inputs[1]) + "  Y=" + bit(output);
-            case LED -> "IN=" + bit(inputs[0]);
-            default -> "Y=" + bit(output);
-        };
-    }
-
-    private static int bit(boolean value) {
-        return value ? 1 : 0;
     }
 }
