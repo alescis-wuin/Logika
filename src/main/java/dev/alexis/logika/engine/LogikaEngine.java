@@ -11,12 +11,14 @@ import dev.alexis.logika.model.PinRef;
 import dev.alexis.logika.simulation.LogicSimulator;
 import dev.alexis.logika.ui.Tool;
 import dev.alexis.logika.ui.Toolbar;
+import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.IntBuffer;
+import java.util.List;
 import java.util.Optional;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
@@ -26,7 +28,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_2;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_3;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_4;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_5;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
@@ -81,6 +82,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public final class LogikaEngine {
     private static final int INITIAL_WIDTH = 1280;
     private static final int INITIAL_HEIGHT = 820;
+    private static final double DRAG_THRESHOLD_PX = 7.0;
+    private static final double TRASH_ICON_SIZE = 34.0;
+    private static final double TRASH_ICON_MARGIN = 8.0;
 
     private final Viewport viewport = new Viewport(INITIAL_WIDTH, INITIAL_HEIGHT, INITIAL_WIDTH, INITIAL_HEIGHT);
     private final InputState input = new InputState();
@@ -93,12 +97,18 @@ public final class LogikaEngine {
 
     private GLFWErrorCallback errorCallback;
     private long window = NULL;
-    private Tool tool = Tool.SELECT;
+    private Tool tool = Tool.INTERACT;
     private PinRef pendingWire;
     private int selectedComponentId = -1;
+    private int hoveredComponentId = -1;
     private int pressedButtonId = -1;
+    private int dragCandidateId = -1;
+    private boolean draggingComponent;
+    private Vec2 dragOffsetFromCenter = new Vec2(0.0, 0.0);
+    private double pressScreenX;
+    private double pressScreenY;
     private boolean simulationRunning = true;
-    private String status = "Place sources, add a NAND gate, then connect output pins to input pins.";
+    private String status = "Pick a component, click an empty grid cell to place it, or click nodes directly to link them.";
 
     public void run() {
         try {
@@ -154,7 +164,7 @@ public final class LogikaEngine {
             }
 
             renderer.render(viewport, camera, circuit, toolbar, tool, pendingWire, selectedComponentId,
-                    simulationRunning, status, input.mouseX(), input.mouseY());
+                    hoveredComponentId, draggingComponent, simulationRunning, status, input.mouseX(), input.mouseY());
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -176,6 +186,11 @@ public final class LogikaEngine {
                 camera.panByScreenDelta(x - previousX, y - previousY);
             }
             input.setMouse(x, y);
+
+            if (input.leftDown() && dragCandidateId != -1) {
+                updateComponentDrag(x, y);
+            }
+            updateHoverState();
         });
 
         glfwSetScrollCallback(window, (handle, offsetX, offsetY) -> {
@@ -184,6 +199,7 @@ public final class LogikaEngine {
             }
             double factor = Math.pow(1.12, offsetY);
             camera.zoomAt(input.mouseX(), input.mouseY(), factor, viewport);
+            updateHoverState();
         });
 
         glfwSetMouseButtonCallback(window, (handle, button, action, mods) -> {
@@ -231,12 +247,19 @@ public final class LogikaEngine {
             return;
         }
 
-        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
-
-        if (tool.isPlacement()) {
-            placeComponent(world);
+        Optional<CircuitComponent> trashTarget = findTrashTarget(input.mouseX(), input.mouseY());
+        if (trashTarget.isPresent()) {
+            int id = trashTarget.get().id();
+            circuit.removeComponent(id);
+            selectedComponentId = -1;
+            hoveredComponentId = -1;
+            pendingWire = null;
+            status = "Component deleted from hover trash icon.";
+            audio.playClick(false);
             return;
         }
+
+        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
 
         Optional<PinEndpoint> pin = circuit.findPin(world, pinHitRadiusWorld());
         if (pin.isPresent()) {
@@ -246,35 +269,115 @@ public final class LogikaEngine {
 
         Optional<CircuitComponent> component = circuit.findComponent(world);
         if (component.isPresent()) {
-            interactWithComponent(component.get());
+            beginComponentPress(component.get(), world);
+            return;
+        }
+
+        if (tool.isPlacement()) {
+            placeComponent(world);
             return;
         }
 
         selectedComponentId = -1;
         if (pendingWire != null) {
-            status = "Wire still pending: click an input pin or press Esc.";
+            status = "Node still selected: click a compatible node or press Esc.";
+        } else {
+            status = "Empty grid selected.";
         }
     }
 
     private void handlePrimaryRelease() {
+        if (dragCandidateId != -1) {
+            Optional<CircuitComponent> component = circuit.componentById(dragCandidateId);
+            if (draggingComponent) {
+                status = "Component moved.";
+                audio.playClick(true);
+            } else {
+                component.ifPresent(this::performComponentClick);
+            }
+        }
+
         if (pressedButtonId != -1) {
             circuit.componentById(pressedButtonId).ifPresent(component -> component.setSourceActive(false));
             pressedButtonId = -1;
-            audio.playClick(false);
+            if (!draggingComponent) {
+                status = "Button released.";
+                audio.playClick(false);
+            }
         }
 
+        dragCandidateId = -1;
+        draggingComponent = false;
         if (!input.panDown()) {
             input.setPanning(false);
         }
+        updateHoverState();
+    }
+
+    private void beginComponentPress(CircuitComponent component, Vec2 world) {
+        selectedComponentId = component.id();
+        dragCandidateId = component.id();
+        draggingComponent = false;
+        pressScreenX = input.mouseX();
+        pressScreenY = input.mouseY();
+        dragOffsetFromCenter = world.subtract(component.center());
+
+        if (component.kind() == ComponentKind.BUTTON) {
+            component.setSourceActive(true);
+            pressedButtonId = component.id();
+            status = "Button active while held. Move the pointer to drag it instead.";
+            audio.playClick(true);
+        } else if (component.kind() == ComponentKind.SWITCH) {
+            status = "Release to toggle, or drag to move.";
+        } else {
+            status = component.kind().label() + " selected. Drag to move.";
+        }
+    }
+
+    private void updateComponentDrag(double screenX, double screenY) {
+        double movement = Math.hypot(screenX - pressScreenX, screenY - pressScreenY);
+        if (!draggingComponent && movement > DRAG_THRESHOLD_PX) {
+            draggingComponent = true;
+            if (pressedButtonId != -1) {
+                circuit.componentById(pressedButtonId).ifPresent(component -> component.setSourceActive(false));
+                pressedButtonId = -1;
+            }
+        }
+
+        if (!draggingComponent) {
+            return;
+        }
+
+        Vec2 mouseWorld = camera.screenToWorld(new Vec2(screenX, screenY), viewport);
+        Vec2 targetCenter = snap(mouseWorld.subtract(dragOffsetFromCenter));
+        circuit.componentById(dragCandidateId).ifPresent(component -> component.setCenter(targetCenter));
+        status = "Dragging component on the grid.";
+    }
+
+    private void performComponentClick(CircuitComponent component) {
+        selectedComponentId = component.id();
+
+        if (component.kind() == ComponentKind.SWITCH) {
+            component.setSourceActive(!component.sourceActive());
+            status = "Switch set to " + (component.sourceActive() ? "true." : "false.");
+            audio.playClick(component.sourceActive());
+            return;
+        }
+
+        if (component.kind() == ComponentKind.BUTTON) {
+            return;
+        }
+
+        status = component.kind().label() + " selected.";
+        audio.playClick(true);
     }
 
     private void handleToolbarAction(Toolbar.Action action) {
         switch (action) {
-            case SELECT -> setTool(Tool.SELECT);
-            case WIRE -> setTool(Tool.WIRE);
             case BUTTON -> setTool(Tool.PLACE_BUTTON);
             case SWITCH -> setTool(Tool.PLACE_SWITCH);
             case NAND -> setTool(Tool.PLACE_NAND);
+            case LED -> setTool(Tool.PLACE_LED);
             case SIMULATION -> {
                 simulationRunning = !simulationRunning;
                 status = simulationRunning ? "Simulation resumed." : "Simulation paused.";
@@ -284,6 +387,8 @@ public final class LogikaEngine {
                 circuit.clear();
                 pendingWire = null;
                 selectedComponentId = -1;
+                hoveredComponentId = -1;
+                tool = Tool.INTERACT;
                 status = "Grid cleared.";
                 audio.playClick(false);
             }
@@ -294,11 +399,11 @@ public final class LogikaEngine {
         tool = nextTool;
         pendingWire = null;
         status = switch (nextTool) {
-            case SELECT -> "Select components, click sources, or click pins to wire.";
-            case WIRE -> "Click an output pin, then a compatible input pin.";
-            case PLACE_BUTTON -> "Click the grid to place a momentary button.";
-            case PLACE_SWITCH -> "Click the grid to place a toggle switch.";
-            case PLACE_NAND -> "Click the grid to place a NAND gate.";
+            case INTERACT -> "Interact directly: click nodes, click sources, drag components.";
+            case PLACE_BUTTON -> "Click an empty grid cell to place a momentary button.";
+            case PLACE_SWITCH -> "Click an empty grid cell to place a toggle switch.";
+            case PLACE_NAND -> "Click an empty grid cell to place a NAND gate.";
+            case PLACE_LED -> "Click an empty grid cell to place a LED indicator.";
         };
         audio.playClick(true);
     }
@@ -308,66 +413,55 @@ public final class LogikaEngine {
         Vec2 snapped = snap(world);
         CircuitComponent component = circuit.addComponent(kind, snapped);
         selectedComponentId = component.id();
-        status = kind.label() + " placed. Select Wire or click pins to connect.";
+        hoveredComponentId = component.id();
+        status = kind.label() + " placed. Click a node to start linking or drag the component to move it.";
         audio.playClick(true);
     }
 
     private void handlePinClick(PinEndpoint pin) {
         if (pendingWire == null) {
-            if (!pin.ref().isOutput()) {
-                status = "Start from an output pin.";
-                audio.playClick(false);
-                return;
-            }
             pendingWire = pin.ref();
-            tool = Tool.WIRE;
             selectedComponentId = pin.ref().componentId();
-            status = "Output selected. Click a compatible input pin.";
+            status = pin.ref().isOutput()
+                    ? "Output node selected. Click a compatible input node."
+                    : "Input node selected. Click a compatible output node.";
             audio.playClick(true);
             return;
         }
 
-        if (pin.ref().isOutput()) {
+        if (pendingWire.equals(pin.ref())) {
+            pendingWire = null;
+            status = "Node selection cancelled.";
+            audio.playClick(false);
+            return;
+        }
+
+        Circuit.ConnectResult result;
+        if (pendingWire.isOutput() && pin.ref().isInput()) {
+            result = circuit.connect(pendingWire, pin.ref());
+        } else if (pendingWire.isInput() && pin.ref().isOutput()) {
+            result = circuit.connect(pin.ref(), pendingWire);
+        } else {
             pendingWire = pin.ref();
             selectedComponentId = pin.ref().componentId();
-            status = "Output changed. Click a compatible input pin.";
+            status = pin.ref().isOutput()
+                    ? "Output node selected. Click a compatible input node."
+                    : "Input node selected. Click a compatible output node.";
             audio.playClick(true);
             return;
         }
 
-        Circuit.ConnectResult result = circuit.connect(pendingWire, pin.ref());
         status = result.message();
         pendingWire = result.success() ? null : pendingWire;
         audio.playClick(result.success());
-    }
-
-    private void interactWithComponent(CircuitComponent component) {
-        selectedComponentId = component.id();
-
-        if (component.kind() == ComponentKind.BUTTON) {
-            component.setSourceActive(true);
-            pressedButtonId = component.id();
-            status = "Button is active while held.";
-            audio.playClick(true);
-            return;
-        }
-
-        if (component.kind() == ComponentKind.SWITCH) {
-            component.setSourceActive(!component.sourceActive());
-            status = "Switch set to " + (component.sourceActive() ? "true." : "false.");
-            audio.playClick(component.sourceActive());
-            return;
-        }
-
-        status = component.kind().label() + " selected.";
     }
 
     private void handleKeyPress(int key) {
         switch (key) {
             case GLFW_KEY_ESCAPE -> {
                 pendingWire = null;
-                tool = Tool.SELECT;
-                status = "Selection mode.";
+                tool = Tool.INTERACT;
+                status = "Interaction mode.";
             }
             case GLFW_KEY_DELETE -> {
                 if (selectedComponentId != -1) {
@@ -385,16 +479,43 @@ public final class LogikaEngine {
             }
             case GLFW_KEY_C -> {
                 camera.reset();
+                updateHoverState();
                 status = "Camera re-centered.";
             }
-            case GLFW_KEY_1 -> setTool(Tool.SELECT);
-            case GLFW_KEY_2 -> setTool(Tool.WIRE);
-            case GLFW_KEY_3 -> setTool(Tool.PLACE_BUTTON);
-            case GLFW_KEY_4 -> setTool(Tool.PLACE_SWITCH);
-            case GLFW_KEY_5 -> setTool(Tool.PLACE_NAND);
+            case GLFW_KEY_1 -> setTool(Tool.PLACE_BUTTON);
+            case GLFW_KEY_2 -> setTool(Tool.PLACE_SWITCH);
+            case GLFW_KEY_3 -> setTool(Tool.PLACE_NAND);
+            case GLFW_KEY_4 -> setTool(Tool.PLACE_LED);
             default -> {
             }
         }
+    }
+
+    private void updateHoverState() {
+        if (toolbar.contains(input.mouseY(), viewport.windowHeight())) {
+            hoveredComponentId = -1;
+            return;
+        }
+        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
+        hoveredComponentId = circuit.findComponent(world).map(CircuitComponent::id).orElse(-1);
+    }
+
+    private Optional<CircuitComponent> findTrashTarget(double mouseX, double mouseY) {
+        List<CircuitComponent> components = circuit.components();
+        for (int i = components.size() - 1; i >= 0; i--) {
+            CircuitComponent component = components.get(i);
+            Rect icon = trashIconRect(component);
+            if (icon.contains(mouseX, mouseY)) {
+                return Optional.of(component);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Rect trashIconRect(CircuitComponent component) {
+        Rect bounds = component.bounds();
+        Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
+        return new Rect(topLeft.x() + TRASH_ICON_MARGIN, topLeft.y() + TRASH_ICON_MARGIN, TRASH_ICON_SIZE, TRASH_ICON_SIZE);
     }
 
     private Vec2 snap(Vec2 world) {
@@ -403,7 +524,7 @@ public final class LogikaEngine {
     }
 
     private double pinHitRadiusWorld() {
-        return Math.max(10.0, 16.0 / camera.zoom());
+        return Math.max(14.0, 24.0 / camera.zoom());
     }
 
     private void refreshViewport() {
