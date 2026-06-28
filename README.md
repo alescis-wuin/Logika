@@ -15,9 +15,15 @@ On Linux Wayland sessions, Logika requests GLFW's X11 backend before `glfwInit()
 ```bash
 git clone https://github.com/alescis-wuin/Logika.git
 cd Logika
-git checkout ai/feat/logika-v1
+git checkout ai/feat/ui-readability
 mvn clean package
 mvn exec:java
+```
+
+Optional font override:
+
+```bash
+LOGIKA_FONT=/path/to/Inter-Regular.ttf LOGIKA_FONT_BOLD=/path/to/Inter-SemiBold.ttf mvn exec:java
 ```
 
 ## Controls
@@ -26,6 +32,7 @@ mvn exec:java
 - Right mouse drag, middle mouse drag, or Space + left drag: pan.
 - Bottom toolbar: choose `Button`, `Switch`, `NAND`, or `LED`, then click an empty grid cell.
 - Node linking: click one node, then click a compatible node. Output → input and input → output are both accepted.
+- Signal badges: each visible node has an internal two-row name/value badge.
 - Button component: hold left click on the body to emit `true`.
 - Switch component: click the body to toggle `true` or `false`.
 - Move component: hold on a component body and drag.
@@ -36,4 +43,4 @@ mvn exec:java
 - `C`: re-center the camera.
 - `1`/`2`/`3`/`4`: choose Button, Switch, NAND, LED.
 
-See [`docs/CONTROLS.md`](docs/CONTROLS.md) and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+See [`docs/CONTROLS.md`](docs/CONTROLS.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md).
