@@ -59,15 +59,19 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class NanoVGRenderer implements AutoCloseable {
     private static final double GRID_SIZE = 32.0;
+    private static final double TRASH_ICON_SIZE = 34.0;
+    private static final double TRASH_ICON_MARGIN = 8.0;
+
     private static final Rgba BACKGROUND = new Rgba(12, 16, 28, 255);
-    private static final Rgba PANEL = new Rgba(24, 31, 48, 238);
-    private static final Rgba PANEL_STROKE = new Rgba(90, 113, 150, 120);
-    private static final Rgba TEXT = new Rgba(232, 238, 249, 255);
-    private static final Rgba TEXT_MUTED = new Rgba(150, 164, 190, 255);
-    private static final Rgba ACTIVE = new Rgba(83, 232, 139, 255);
-    private static final Rgba INACTIVE = new Rgba(117, 128, 150, 255);
-    private static final Rgba ACCENT = new Rgba(101, 160, 255, 255);
-    private static final Rgba WARNING = new Rgba(255, 192, 89, 255);
+    private static final Rgba PANEL = new Rgba(24, 31, 48, 240);
+    private static final Rgba PANEL_STROKE = new Rgba(105, 126, 164, 130);
+    private static final Rgba TEXT = new Rgba(238, 244, 255, 255);
+    private static final Rgba TEXT_MUTED = new Rgba(172, 186, 214, 255);
+    private static final Rgba ACTIVE = new Rgba(73, 210, 128, 255);
+    private static final Rgba INACTIVE = new Rgba(94, 106, 132, 255);
+    private static final Rgba ACCENT = new Rgba(132, 184, 255, 255);
+    private static final Rgba WARNING = new Rgba(255, 195, 92, 255);
+    private static final Rgba DANGER = new Rgba(238, 92, 92, 255);
 
     private long vg = NULL;
     private boolean fontLoaded;
@@ -81,21 +85,26 @@ public final class NanoVGRenderer implements AutoCloseable {
     }
 
     public void render(Viewport viewport, Camera2D camera, Circuit circuit, Toolbar toolbar, Tool tool,
-                       PinRef pendingWire, int selectedComponentId, boolean simulationRunning,
-                       String status, double mouseX, double mouseY) {
+                       PinRef pendingWire, int selectedComponentId, int hoveredComponentId,
+                       boolean draggingComponent, boolean simulationRunning, String status,
+                       double mouseX, double mouseY) {
         glViewport(0, 0, viewport.framebufferWidth(), viewport.framebufferHeight());
         glClearColor(BACKGROUND.rf(), BACKGROUND.gf(), BACKGROUND.bf(), 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+        Vec2 mouseWorld = camera.screenToWorld(new Vec2(mouseX, mouseY), viewport);
+        PinRef hoveredPin = circuit.findPin(mouseWorld, Math.max(14.0, 24.0 / camera.zoom()))
+                .map(PinEndpoint::ref)
+                .orElse(null);
+
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
         fillRect(0, 0, viewport.windowWidth(), viewport.windowHeight(), BACKGROUND);
-        fillRect(0, 0, viewport.windowWidth(), 96, new Rgba(16, 22, 38, 90));
         drawGrid(camera, viewport);
         drawWires(camera, viewport, circuit);
         drawPendingWire(camera, viewport, circuit, pendingWire, mouseX, mouseY);
-        drawComponents(camera, viewport, circuit, selectedComponentId);
+        drawComponents(camera, viewport, circuit, selectedComponentId, hoveredComponentId, hoveredPin, pendingWire);
         drawToolbar(toolbar, viewport, tool, simulationRunning);
-        drawStatus(tool, pendingWire, simulationRunning, status, viewport);
+        drawStatus(tool, pendingWire, draggingComponent, simulationRunning, status, viewport);
         nvgEndFrame(vg);
     }
 
@@ -136,15 +145,16 @@ public final class NanoVGRenderer implements AutoCloseable {
         double maxY = Math.max(topLeft.y(), bottomRight.y());
 
         double step = GRID_SIZE;
-        while (step * camera.zoom() < 18.0) {
+        while (step * camera.zoom() < 24.0) {
             step *= 2.0;
         }
-        while (step * camera.zoom() > 72.0) {
+        while (step * camera.zoom() > 92.0) {
             step /= 2.0;
         }
 
-        drawGridLayer(camera, viewport, minX, maxX, minY, maxY, step, new Rgba(93, 112, 145, 36), 1.0f);
-        drawGridLayer(camera, viewport, minX, maxX, minY, maxY, step * 4.0, new Rgba(106, 142, 190, 70), 1.15f);
+        drawGridLayer(camera, viewport, minX, maxX, minY, maxY, step, new Rgba(93, 112, 145, 38), 1.0f);
+        drawGridLayer(camera, viewport, minX, maxX, minY, maxY, step * 4.0, new Rgba(116, 154, 204, 78), 1.35f);
+        drawAxes(camera, viewport, minX, maxX, minY, maxY);
     }
 
     private void drawGridLayer(Camera2D camera, Viewport viewport, double minX, double maxX, double minY, double maxY,
@@ -164,6 +174,29 @@ public final class NanoVGRenderer implements AutoCloseable {
             nvgLineTo(vg, viewport.windowWidth(), (float) screen.y());
         }
         stroke(color, width);
+    }
+
+    private void drawAxes(Camera2D camera, Viewport viewport, double minX, double maxX, double minY, double maxY) {
+        if (minY <= 0.0 && maxY >= 0.0) {
+            Vec2 start = camera.worldToScreen(new Vec2(minX, 0.0), viewport);
+            Vec2 end = camera.worldToScreen(new Vec2(maxX, 0.0), viewport);
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, (float) start.x(), (float) start.y());
+            nvgLineTo(vg, (float) end.x(), (float) end.y());
+            stroke(new Rgba(126, 164, 220, 140), 2.0f);
+            text("X axis", viewport.windowWidth() - 74.0f, (float) start.y() - 12.0f, 14.0f,
+                    NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+        }
+        if (minX <= 0.0 && maxX >= 0.0) {
+            Vec2 start = camera.worldToScreen(new Vec2(0.0, minY), viewport);
+            Vec2 end = camera.worldToScreen(new Vec2(0.0, maxY), viewport);
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, (float) start.x(), (float) start.y());
+            nvgLineTo(vg, (float) end.x(), (float) end.y());
+            stroke(new Rgba(126, 164, 220, 140), 2.0f);
+            text("Y axis", (float) start.x() + 16.0f, 104.0f, 14.0f,
+                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+        }
     }
 
     private void drawWires(Camera2D camera, Viewport viewport, Circuit circuit) {
@@ -189,145 +222,154 @@ public final class NanoVGRenderer implements AutoCloseable {
     private void drawWire(Camera2D camera, Viewport viewport, Vec2 startWorld, Vec2 endWorld, boolean active, boolean pending) {
         Vec2 start = camera.worldToScreen(startWorld, viewport);
         Vec2 end = camera.worldToScreen(endWorld, viewport);
-        double control = Math.max(48.0, Math.abs(end.x() - start.x()) * 0.45);
-        Rgba color = pending ? WARNING : (active ? ACTIVE : new Rgba(96, 108, 132, 210));
+        double control = Math.max(58.0, Math.abs(end.x() - start.x()) * 0.45);
+        Rgba color = pending ? WARNING : (active ? ACTIVE : new Rgba(103, 116, 143, 220));
 
         nvgBeginPath(vg);
         nvgMoveTo(vg, (float) start.x(), (float) start.y());
         nvgBezierTo(vg, (float) (start.x() + control), (float) start.y(),
                 (float) (end.x() - control), (float) end.y(), (float) end.x(), (float) end.y());
-        stroke(new Rgba(6, 8, 14, 190), pending ? 7.0f : 6.0f);
+        stroke(new Rgba(5, 7, 13, 200), pending ? 8.0f : 7.0f);
 
         nvgBeginPath(vg);
         nvgMoveTo(vg, (float) start.x(), (float) start.y());
         nvgBezierTo(vg, (float) (start.x() + control), (float) start.y(),
                 (float) (end.x() - control), (float) end.y(), (float) end.x(), (float) end.y());
-        stroke(color, pending ? 3.0f : 2.7f);
+        stroke(color, pending ? 4.0f : 3.5f);
     }
 
-    private void drawComponents(Camera2D camera, Viewport viewport, Circuit circuit, int selectedComponentId) {
+    private void drawComponents(Camera2D camera, Viewport viewport, Circuit circuit, int selectedComponentId,
+                                int hoveredComponentId, PinRef hoveredPin, PinRef pendingWire) {
         for (CircuitComponent component : circuit.components()) {
             Rect bounds = component.bounds();
             Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
             double width = bounds.width() * camera.zoom();
             double height = bounds.height() * camera.zoom();
-            boolean active = component.output();
+            boolean active = component.visualActive();
             boolean selected = component.id() == selectedComponentId;
-            Rgba body = component.kind() == ComponentKind.NAND ? new Rgba(35, 45, 68, 245) : new Rgba(32, 43, 64, 245);
+            boolean hovered = component.id() == hoveredComponentId;
 
-            fillRound(topLeft.x() + 4.0, topLeft.y() + 8.0, width, height, 18.0, new Rgba(0, 0, 0, 70));
-            fillRound(topLeft.x(), topLeft.y(), width, height, 18.0, body);
-            strokeRound(topLeft.x(), topLeft.y(), width, height, 18.0, selected ? ACCENT : (active ? ACTIVE : PANEL_STROKE), selected ? 2.4f : 1.5f);
+            Rgba body = bodyColor(component.kind(), active);
+            Rgba border = hovered ? new Rgba(190, 214, 255, 255) : selected ? ACCENT : active ? ACTIVE : PANEL_STROKE;
+            float borderWidth = hovered ? 3.0f : selected ? 2.5f : 1.6f;
 
-            if (component.kind() == ComponentKind.BUTTON) {
-                drawButtonSymbol(component, topLeft, width, height);
-            } else if (component.kind() == ComponentKind.SWITCH) {
-                drawSwitchSymbol(component, topLeft, width, height);
-            } else {
-                drawNandSymbol(component, topLeft, width, height);
-            }
+            fillRound(topLeft.x() + 5.0, topLeft.y() + 10.0, width, height, 22.0, new Rgba(0, 0, 0, 80));
+            fillRound(topLeft.x(), topLeft.y(), width, height, 22.0, body);
+            strokeRound(topLeft.x(), topLeft.y(), width, height, 22.0, border, borderWidth);
 
-            if (width > 72.0) {
-                text(component.kind().label(), (float) (topLeft.x() + width / 2.0), (float) (topLeft.y() + 18.0 * camera.zoom()),
-                        (float) clamp(11.0 * camera.zoom(), 9.0, 15.0), NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT);
-                text(component.valueLabel(), (float) (topLeft.x() + width / 2.0), (float) (topLeft.y() + height - 15.0 * camera.zoom()),
-                        (float) clamp(9.0 * camera.zoom(), 8.0, 12.0), NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+            double labelY = topLeft.y() + Math.max(30.0, height * 0.36);
+            double valueY = topLeft.y() + Math.max(56.0, height * 0.67);
+            text(component.kind().label(), (float) (topLeft.x() + width / 2.0), (float) labelY,
+                    (float) clamp(16.0 * camera.zoom(), 13.0, 22.0), NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT);
+            text(component.valueLabel(), (float) (topLeft.x() + width / 2.0), (float) valueY,
+                    (float) clamp(13.0 * camera.zoom(), 11.0, 18.0), NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+
+            if (hovered) {
+                drawTrashIcon(topLeft.x() + TRASH_ICON_MARGIN, topLeft.y() + TRASH_ICON_MARGIN);
             }
 
             for (PinEndpoint pin : component.pins()) {
-                drawPin(camera, viewport, circuit, pin);
+                drawPin(camera, viewport, circuit, pin, pin.ref().equals(hoveredPin), pin.ref().equals(pendingWire));
             }
         }
     }
 
-    private void drawButtonSymbol(CircuitComponent component, Vec2 topLeft, double width, double height) {
-        double radius = Math.max(8.0, Math.min(width, height) * 0.18);
-        circle(topLeft.x() + width / 2.0, topLeft.y() + height / 2.0, radius + 5.0, new Rgba(0, 0, 0, 90));
-        circle(topLeft.x() + width / 2.0, topLeft.y() + height / 2.0, radius, component.output() ? ACTIVE : INACTIVE);
+    private Rgba bodyColor(ComponentKind kind, boolean active) {
+        if (!active) {
+            return new Rgba(23, 30, 46, 248);
+        }
+        if (kind == ComponentKind.LED) {
+            return new Rgba(170, 132, 34, 252);
+        }
+        return new Rgba(34, 105, 70, 252);
     }
 
-    private void drawSwitchSymbol(CircuitComponent component, Vec2 topLeft, double width, double height) {
-        double switchWidth = Math.max(34.0, width * 0.42);
-        double switchHeight = Math.max(16.0, height * 0.26);
-        double x = topLeft.x() + width / 2.0 - switchWidth / 2.0;
-        double y = topLeft.y() + height / 2.0 - switchHeight / 2.0;
-        fillRound(x, y, switchWidth, switchHeight, switchHeight / 2.0,
-                component.output() ? new Rgba(58, 145, 95, 255) : new Rgba(73, 81, 101, 255));
-        double knobX = component.output() ? x + switchWidth - switchHeight / 2.0 : x + switchHeight / 2.0;
-        circle(knobX, y + switchHeight / 2.0, switchHeight * 0.42, TEXT);
-    }
-
-    private void drawNandSymbol(CircuitComponent component, Vec2 topLeft, double width, double height) {
-        double gateWidth = width * 0.42;
-        double gateHeight = height * 0.32;
-        double x = topLeft.x() + width / 2.0 - gateWidth / 2.0;
-        double y = topLeft.y() + height / 2.0 - gateHeight / 2.0;
-        fillRound(x, y, gateWidth, gateHeight, 10.0, new Rgba(21, 28, 43, 180));
-        strokeRound(x, y, gateWidth, gateHeight, 10.0, component.output() ? ACTIVE : PANEL_STROKE, 1.2f);
-        text("NAND", (float) (x + gateWidth / 2.0), (float) (y + gateHeight / 2.0), 11.0f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT);
-    }
-
-    private void drawPin(Camera2D camera, Viewport viewport, Circuit circuit, PinEndpoint pin) {
+    private void drawPin(Camera2D camera, Viewport viewport, Circuit circuit, PinEndpoint pin, boolean hovered, boolean pending) {
         Vec2 screen = camera.worldToScreen(pin.worldPosition(), viewport);
         boolean value = circuit.pinValue(pin.ref());
         boolean output = pin.ref().direction() == PinDirection.OUTPUT;
-        double radius = clamp(7.0 * Math.sqrt(camera.zoom()), 5.0, 10.0);
-        Rgba color = value ? ACTIVE : (output ? new Rgba(134, 152, 184, 255) : new Rgba(80, 95, 125, 255));
+        double radius = clamp(12.5 * Math.sqrt(camera.zoom()), 8.5, 17.0);
+        if (hovered || pending) {
+            radius += 3.0;
+        }
+        Rgba color = value ? ACTIVE : (output ? new Rgba(145, 164, 200, 255) : new Rgba(91, 107, 140, 255));
+        Rgba border = pending ? WARNING : hovered ? new Rgba(225, 236, 255, 255) : new Rgba(4, 7, 13, 160);
 
-        circle(screen.x(), screen.y(), radius + 3.0, new Rgba(0, 0, 0, 120));
+        circle(screen.x(), screen.y(), radius + 4.0, border);
         circle(screen.x(), screen.y(), radius, color);
 
-        if (camera.zoom() > 0.48) {
+        if (camera.zoom() > 0.36) {
             int align = output ? NVG_ALIGN_LEFT : NVG_ALIGN_RIGHT;
-            float dx = output ? 12.0f : -12.0f;
-            text(pin.label(), (float) screen.x() + dx, (float) screen.y(), 10.0f, align | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+            float dx = output ? 17.0f : -17.0f;
+            text(pin.label(), (float) screen.x() + dx, (float) screen.y(), 13.5f, align | NVG_ALIGN_MIDDLE, TEXT);
         }
     }
 
+    private void drawTrashIcon(double x, double y) {
+        fillRound(x, y, TRASH_ICON_SIZE, TRASH_ICON_SIZE, 10.0, new Rgba(88, 32, 40, 248));
+        strokeRound(x, y, TRASH_ICON_SIZE, TRASH_ICON_SIZE, 10.0, DANGER, 1.6f);
+
+        double cx = x + TRASH_ICON_SIZE / 2.0;
+        double top = y + 10.0;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, (float) (cx - 9.0), (float) top);
+        nvgLineTo(vg, (float) (cx + 9.0), (float) top);
+        nvgMoveTo(vg, (float) (cx - 5.0), (float) (top - 3.0));
+        nvgLineTo(vg, (float) (cx + 5.0), (float) (top - 3.0));
+        nvgRect(vg, (float) (cx - 7.0), (float) (top + 4.0), 14.0f, 14.0f);
+        stroke(TEXT, 1.8f);
+    }
+
     private void drawToolbar(Toolbar toolbar, Viewport viewport, Tool tool, boolean simulationRunning) {
-        double y = viewport.windowHeight() - 92.0;
-        fillRound(14.0, y, viewport.windowWidth() - 28.0, 82.0, 24.0, PANEL);
-        strokeRound(14.0, y, viewport.windowWidth() - 28.0, 82.0, 24.0, PANEL_STROKE, 1.0f);
+        double y = viewport.windowHeight() - 108.0;
+        fillRound(14.0, y, viewport.windowWidth() - 28.0, 96.0, 26.0, PANEL);
+        strokeRound(14.0, y, viewport.windowWidth() - 28.0, 96.0, 26.0, PANEL_STROKE, 1.2f);
 
         List<Toolbar.Item> items = toolbar.layout(viewport.windowWidth(), viewport.windowHeight());
         for (Toolbar.Item item : items) {
             boolean selected = isSelected(item.action(), tool);
             boolean simButton = item.action() == Toolbar.Action.SIMULATION;
-            Rgba fill = selected ? new Rgba(63, 93, 142, 245) : new Rgba(31, 41, 61, 235);
-            Rgba outline = selected ? ACCENT : new Rgba(85, 103, 134, 100);
+            Rgba fill = selected ? new Rgba(66, 98, 148, 248) : new Rgba(31, 41, 61, 240);
+            Rgba outline = selected ? ACCENT : new Rgba(91, 110, 144, 130);
             if (simButton && simulationRunning) {
                 outline = ACTIVE;
             }
 
             Rect r = item.rect();
-            fillRound(r.x(), r.y(), r.width(), r.height(), 16.0, fill);
-            strokeRound(r.x(), r.y(), r.width(), r.height(), 16.0, outline, selected ? 2.0f : 1.0f);
+            fillRound(r.x(), r.y(), r.width(), r.height(), 18.0, fill);
+            strokeRound(r.x(), r.y(), r.width(), r.height(), 18.0, outline, selected ? 2.2f : 1.2f);
             String label = simButton ? (simulationRunning ? "Sim ON" : "Sim OFF") : item.label();
-            text(label, (float) r.centerX(), (float) (r.y() + 19.0), 13.0f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT);
-            text(item.hint(), (float) r.centerX(), (float) (r.y() + 37.0), 9.5f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+            text(label, (float) r.centerX(), (float) (r.y() + 23.0), 16.0f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT);
+            text(item.hint(), (float) r.centerX(), (float) (r.y() + 45.0), 11.5f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE, TEXT_MUTED);
         }
     }
 
-    private void drawStatus(Tool tool, PinRef pendingWire, boolean simulationRunning, String status, Viewport viewport) {
-        fillRound(20.0, 18.0, Math.min(760.0, viewport.windowWidth() - 40.0), 52.0, 18.0, new Rgba(20, 27, 43, 225));
-        strokeRound(20.0, 18.0, Math.min(760.0, viewport.windowWidth() - 40.0), 52.0, 18.0, PANEL_STROKE, 1.0f);
+    private void drawStatus(Tool tool, PinRef pendingWire, boolean draggingComponent, boolean simulationRunning,
+                            String status, Viewport viewport) {
+        double width = Math.min(1040.0, viewport.windowWidth() - 40.0);
+        fillRound(20.0, 16.0, width, 84.0, 20.0, new Rgba(20, 27, 43, 230));
+        strokeRound(20.0, 16.0, width, 84.0, 20.0, PANEL_STROKE, 1.1f);
+
         String mode = "Tool: " + tool.label() + "  ·  Simulation: " + (simulationRunning ? "live" : "paused");
         if (pendingWire != null) {
-            mode += "  ·  Wire: choose input";
+            mode += "  ·  Node linking: choose an input";
+        } else if (draggingComponent) {
+            mode += "  ·  Dragging";
         }
-        text(mode, 40.0f, 36.0f, 13.0f, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT);
-        text(status, 40.0f, 57.0f, 11.0f, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
-        text("Wheel zoom · RMB/MMB pan · Esc cancel · S simulate", viewport.windowWidth() - 26.0f, 36.0f,
-                11.0f, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+        text(mode, 42.0f, 38.0f, 16.0f, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT);
+        text(status, 42.0f, 62.0f, 14.0f, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+        text("Nodes: output → input · Drag: hold + move · Delete: hover trash", 42.0f, 84.0f,
+                13.0f, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
+        text("Wheel zoom · RMB/MMB/Space pan · Esc cancel · S sim · C center", viewport.windowWidth() - 26.0f,
+                38.0f, 13.0f, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE, TEXT_MUTED);
     }
 
     private static boolean isSelected(Toolbar.Action action, Tool tool) {
         return switch (action) {
-            case SELECT -> tool == Tool.SELECT;
-            case WIRE -> tool == Tool.WIRE;
             case BUTTON -> tool == Tool.PLACE_BUTTON;
             case SWITCH -> tool == Tool.PLACE_SWITCH;
             case NAND -> tool == Tool.PLACE_NAND;
+            case LED -> tool == Tool.PLACE_LED;
             case SIMULATION, CLEAR -> false;
         };
     }
