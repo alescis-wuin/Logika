@@ -1,20 +1,22 @@
 package dev.alexis.logika.model;
 
 public enum ComponentKind {
-    BUTTON("Button", "Hold source", 132.0, 82.0),
-    SWITCH("Switch", "Toggle source", 150.0, 82.0),
-    NAND("NAND", "!(A && B)", 152.0, 98.0),
-    LED("LED", "Input indicator", 116.0, 82.0);
+    BUTTON("Button", "Hold source", 224.0, 152.0),
+    SWITCH("Switch", "Toggle source", 232.0, 152.0),
+    NAND("NAND", "!(A && B)", 280.0, 176.0),
+    LED("LED", "Input indicator", 214.0, 152.0);
+
+    private static final double MIN_WIDTH = 280.0;
 
     private final String label;
     private final String description;
-    private final double width;
+    private final double naturalWidth;
     private final double height;
 
-    ComponentKind(String label, String description, double width, double height) {
+    ComponentKind(String label, String description, double naturalWidth, double height) {
         this.label = label;
         this.description = description;
-        this.width = width;
+        this.naturalWidth = naturalWidth;
         this.height = height;
     }
 
@@ -27,7 +29,7 @@ public enum ComponentKind {
     }
 
     public double width() {
-        return width;
+        return Math.max(naturalWidth, MIN_WIDTH);
     }
 
     public double height() {
