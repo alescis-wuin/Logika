@@ -17,18 +17,19 @@ public final class Toolbar {
     }
 
     public List<Item> layout(int windowWidth, int windowHeight) {
-        double y = windowHeight - 88.0;
+        double panelTop = windowHeight - UiMetrics.TOOLBAR_PANEL_HEIGHT_SCREEN - UiMetrics.TOOLBAR_PANEL_MARGIN_SCREEN;
+        double y = panelTop + UiMetrics.TOOLBAR_ITEM_TOP_PADDING_SCREEN;
         double x = 24.0;
-        double height = 62.0;
-        double gap = 12.0;
+        double height = UiMetrics.TOOLBAR_ITEM_HEIGHT_SCREEN;
+        double gap = UiMetrics.TOOLBAR_ITEM_GAP_SCREEN;
 
         List<Item> items = new ArrayList<>();
-        x = add(items, Action.BUTTON, "Button", "hold = 1", x, y, 136.0, height, gap);
-        x = add(items, Action.SWITCH, "Switch", "click = toggle", x, y, 150.0, height, gap);
-        x = add(items, Action.NAND, "NAND", "2 inputs", x, y, 122.0, height, gap);
-        x = add(items, Action.LED, "LED", "input light", x, y, 118.0, height, gap);
-        x = add(items, Action.SIMULATION, "Sim", "pause / run", x, y, 128.0, height, gap);
-        add(items, Action.CLEAR, "Clear", "reset grid", x, y, 124.0, height, gap);
+        x = add(items, Action.BUTTON, "Button", "hold = 1", x, y, 162.0, height, gap);
+        x = add(items, Action.SWITCH, "Switch", "click = toggle", x, y, 178.0, height, gap);
+        x = add(items, Action.NAND, "NAND", "2 inputs", x, y, 148.0, height, gap);
+        x = add(items, Action.LED, "LED", "input light", x, y, 142.0, height, gap);
+        x = add(items, Action.SIMULATION, "Sim", "pause / run", x, y, 156.0, height, gap);
+        add(items, Action.CLEAR, "Clear", "reset grid", x, y, 148.0, height, gap);
 
         return items;
     }
@@ -41,7 +42,7 @@ public final class Toolbar {
     }
 
     public boolean contains(double mouseY, int windowHeight) {
-        return mouseY >= windowHeight - 110.0;
+        return mouseY >= windowHeight - UiMetrics.TOOLBAR_PANEL_HEIGHT_SCREEN - UiMetrics.TOOLBAR_PANEL_MARGIN_SCREEN;
     }
 
     private static double add(List<Item> items, Action action, String label, String hint,
