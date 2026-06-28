@@ -8,7 +8,7 @@ GLFW exposes both a window content size and a framebuffer size. Logika stores bo
 
 ## NanoVG
 
-NanoVG draws in screen coordinates. World positions are converted by `Camera2D` before rendering components, pins, wires, and the grid.
+NanoVG draws in screen coordinates. World positions are converted by `Camera2D` before rendering components, pins, wires, hover affordances, and the grid.
 
 ```java
 nvgBeginFrame(vg, windowWidth, windowHeight, devicePixelRatio);
@@ -16,9 +16,10 @@ nvgBeginFrame(vg, windowWidth, windowHeight, devicePixelRatio);
 
 ## UI and UX principles used
 
-- visible state: the active tool, pending wire, simulation state, and status are always shown;
-- recognition over recall: tools remain visible in the bottom toolbar;
-- minimalist V1 surface: placement, wiring, simulation, and reset only;
+- visible state: active placement tool, pending node, simulation state, hover state, and status are always shown;
+- recognition over recall: component placement remains visible in the bottom toolbar;
+- direct manipulation: linking, source interaction, movement, and deletion happen directly on the grid;
+- minimalist V1 surface: placement, direct node linking, simulation, and reset only;
 - generous targets: toolbar buttons and pins use large hit areas;
 - state is not color-only: logical values also appear as text labels.
 
