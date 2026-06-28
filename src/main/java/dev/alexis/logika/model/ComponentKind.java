@@ -1,9 +1,10 @@
 package dev.alexis.logika.model;
 
 public enum ComponentKind {
-    BUTTON("Button", "Momentary source", 96.0, 58.0),
-    SWITCH("Switch", "Toggle source", 108.0, 58.0),
-    NAND("NAND", "!(A && B)", 104.0, 72.0);
+    BUTTON("Button", "Hold source", 132.0, 82.0),
+    SWITCH("Switch", "Toggle source", 150.0, 82.0),
+    NAND("NAND", "!(A && B)", 152.0, 98.0),
+    LED("LED", "Input indicator", 116.0, 82.0);
 
     private final String label;
     private final String description;
@@ -38,10 +39,14 @@ public enum ComponentKind {
     }
 
     public int inputCount() {
-        return this == NAND ? 2 : 0;
+        return switch (this) {
+            case NAND -> 2;
+            case LED -> 1;
+            default -> 0;
+        };
     }
 
     public int outputCount() {
-        return 1;
+        return this == LED ? 0 : 1;
     }
 }
