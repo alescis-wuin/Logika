@@ -9,8 +9,8 @@ import java.util.List;
 public final class CircuitComponent {
     private final int id;
     private final ComponentKind kind;
-    private final double x;
-    private final double y;
+    private double x;
+    private double y;
     private boolean sourceActive;
     private boolean output;
     private final boolean[] inputs = new boolean[2];
@@ -34,6 +34,15 @@ public final class CircuitComponent {
         return new Rect(x, y, kind.width(), kind.height());
     }
 
+    public Vec2 center() {
+        return new Vec2(x + kind.width() / 2.0, y + kind.height() / 2.0);
+    }
+
+    public void setCenter(Vec2 center) {
+        x = center.x() - kind.width() / 2.0;
+        y = center.y() - kind.height() / 2.0;
+    }
+
     public boolean contains(Vec2 world) {
         return bounds().contains(world);
     }
@@ -43,27 +52,18 @@ public final class CircuitComponent {
         Rect b = bounds();
 
         if (kind == ComponentKind.NAND) {
-            pins.add(new PinEndpoint(
-                    new PinRef(id, PinDirection.INPUT, 0),
-                    "A",
-                    new Vec2(b.x(), b.y() + b.height() * 0.34)
-            ));
-            pins.add(new PinEndpoint(
-                    new PinRef(id, PinDirection.INPUT, 1),
-                    "B",
-                    new Vec2(b.x(), b.y() + b.height() * 0.66)
-            ));
-            pins.add(new PinEndpoint(
-                    new PinRef(id, PinDirection.OUTPUT, 0),
-                    "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)
-            ));
+            pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "A",
+                    new Vec2(b.x(), b.y() + b.height() * 0.34)));
+            pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 1), "B",
+                    new Vec2(b.x(), b.y() + b.height() * 0.66)));
+            pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)));
+        } else if (kind == ComponentKind.LED) {
+            pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "IN",
+                    new Vec2(b.x(), b.y() + b.height() * 0.5)));
         } else {
-            pins.add(new PinEndpoint(
-                    new PinRef(id, PinDirection.OUTPUT, 0),
-                    "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)
-            ));
+            pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.5)));
         }
 
         return pins;
@@ -79,6 +79,10 @@ public final class CircuitComponent {
 
     public boolean output() {
         return output;
+    }
+
+    public boolean visualActive() {
+        return kind == ComponentKind.LED ? input(0) : output;
     }
 
     public boolean setOutput(boolean output) {
@@ -107,10 +111,11 @@ public final class CircuitComponent {
     }
 
     public String valueLabel() {
-        if (kind == ComponentKind.NAND) {
-            return "A=" + bit(inputs[0]) + "  B=" + bit(inputs[1]) + "  Y=" + bit(output);
-        }
-        return "Y=" + bit(output);
+        return switch (kind) {
+            case NAND -> "A=" + bit(inputs[0]) + "  B=" + bit(inputs[1]) + "  Y=" + bit(output);
+            case LED -> "IN=" + bit(inputs[0]);
+            default -> "Y=" + bit(output);
+        };
     }
 
     private static int bit(boolean value) {
