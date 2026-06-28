@@ -10,7 +10,7 @@ public final class LogicSimulator {
             return;
         }
 
-        initializeOutputs(circuit);
+        initializeSourceOutputs(circuit);
         int iterations = Math.max(4, circuit.components().size() + circuit.wires().size() + 1);
 
         for (int i = 0; i < iterations; i++) {
@@ -33,7 +33,7 @@ public final class LogicSimulator {
         }
     }
 
-    private static void initializeOutputs(Circuit circuit) {
+    private static void initializeSourceOutputs(Circuit circuit) {
         for (CircuitComponent component : circuit.components()) {
             if (component.kind().isSource()) {
                 component.setOutput(component.sourceActive());
@@ -42,9 +42,10 @@ public final class LogicSimulator {
     }
 
     private static boolean computeOutput(CircuitComponent component) {
-        if (component.kind() == ComponentKind.NAND) {
-            return !(component.input(0) && component.input(1));
-        }
-        return component.sourceActive();
+        return switch (component.kind()) {
+            case NAND -> !(component.input(0) && component.input(1));
+            case LED -> component.input(0);
+            default -> component.sourceActive();
+        };
     }
 }
