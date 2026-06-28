@@ -8,29 +8,27 @@ import java.util.Optional;
 
 public final class Toolbar {
     public enum Action {
-        SELECT,
-        WIRE,
         BUTTON,
         SWITCH,
         NAND,
+        LED,
         SIMULATION,
         CLEAR
     }
 
     public List<Item> layout(int windowWidth, int windowHeight) {
-        double y = windowHeight - 76.0;
+        double y = windowHeight - 88.0;
         double x = 24.0;
-        double height = 52.0;
-        double gap = 10.0;
+        double height = 62.0;
+        double gap = 12.0;
 
         List<Item> items = new ArrayList<>();
-        x = add(items, Action.SELECT, "Select", "inspect", x, y, 94.0, height, gap);
-        x = add(items, Action.WIRE, "Wire", "pins", x, y, 86.0, height, gap);
-        x = add(items, Action.BUTTON, "Button", "momentary", x, y, 112.0, height, gap);
-        x = add(items, Action.SWITCH, "Switch", "toggle", x, y, 120.0, height, gap);
-        x = add(items, Action.NAND, "NAND", "gate", x, y, 94.0, height, gap);
-        x = add(items, Action.SIMULATION, "Sim", "pause", x, y, 96.0, height, gap);
-        add(items, Action.CLEAR, "Clear", "reset", x, y, 96.0, height, gap);
+        x = add(items, Action.BUTTON, "Button", "hold = 1", x, y, 136.0, height, gap);
+        x = add(items, Action.SWITCH, "Switch", "click = toggle", x, y, 150.0, height, gap);
+        x = add(items, Action.NAND, "NAND", "2 inputs", x, y, 122.0, height, gap);
+        x = add(items, Action.LED, "LED", "input light", x, y, 118.0, height, gap);
+        x = add(items, Action.SIMULATION, "Sim", "pause / run", x, y, 128.0, height, gap);
+        add(items, Action.CLEAR, "Clear", "reset grid", x, y, 124.0, height, gap);
 
         return items;
     }
@@ -43,7 +41,7 @@ public final class Toolbar {
     }
 
     public boolean contains(double mouseY, int windowHeight) {
-        return mouseY >= windowHeight - 92.0;
+        return mouseY >= windowHeight - 110.0;
     }
 
     private static double add(List<Item> items, Action action, String label, String hint,
