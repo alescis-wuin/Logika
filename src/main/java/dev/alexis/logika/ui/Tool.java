@@ -5,14 +5,14 @@ import dev.alexis.logika.model.ComponentKind;
 import java.util.Optional;
 
 public enum Tool {
-    SELECT,
-    WIRE,
+    INTERACT,
     PLACE_BUTTON,
     PLACE_SWITCH,
-    PLACE_NAND;
+    PLACE_NAND,
+    PLACE_LED;
 
     public boolean isPlacement() {
-        return this == PLACE_BUTTON || this == PLACE_SWITCH || this == PLACE_NAND;
+        return this != INTERACT;
     }
 
     public Optional<ComponentKind> componentKind() {
@@ -20,17 +20,18 @@ public enum Tool {
             case PLACE_BUTTON -> Optional.of(ComponentKind.BUTTON);
             case PLACE_SWITCH -> Optional.of(ComponentKind.SWITCH);
             case PLACE_NAND -> Optional.of(ComponentKind.NAND);
-            default -> Optional.empty();
+            case PLACE_LED -> Optional.of(ComponentKind.LED);
+            case INTERACT -> Optional.empty();
         };
     }
 
     public String label() {
         return switch (this) {
-            case SELECT -> "Select";
-            case WIRE -> "Wire";
+            case INTERACT -> "Interact";
             case PLACE_BUTTON -> "Button";
             case PLACE_SWITCH -> "Switch";
             case PLACE_NAND -> "NAND";
+            case PLACE_LED -> "LED";
         };
     }
 }
