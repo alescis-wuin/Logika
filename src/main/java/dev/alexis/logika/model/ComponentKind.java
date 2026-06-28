@@ -1,10 +1,10 @@
 package dev.alexis.logika.model;
 
 public enum ComponentKind {
-    BUTTON("Button", "Hold source", 224.0, 152.0),
-    SWITCH("Switch", "Toggle source", 232.0, 152.0),
-    NAND("NAND", "!(A && B)", 280.0, 176.0),
-    LED("LED", "Input indicator", 214.0, 152.0);
+    BUTTON("Button", "Hold source", 224.0, 184.0),
+    SWITCH("Switch", "Toggle source", 232.0, 184.0),
+    NAND("NAND", "!(A && B)", 280.0, 220.0),
+    LED("LED", "Input indicator", 214.0, 184.0);
 
     private static final double MIN_WIDTH = 280.0;
 
