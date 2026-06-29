@@ -8,6 +8,7 @@ import dev.alexis.logika.model.PinRef;
 import dev.alexis.logika.model.Wire;
 import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.ui.Toolbar;
+import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Vec2;
 
 import java.util.List;
@@ -15,8 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 
 final class InteractionFeedbackResolver {
-    private static final double TARGET_PIN_SEARCH_RADIUS_SCREEN = 94.0;
-
     WireTargetFeedback resolveWireTarget(Camera2D camera, Viewport viewport, Circuit circuit, PinRef pendingWire,
                                          PinRef hoveredPin, double mouseX, double mouseY) {
         if (pendingWire == null || !validPin(circuit, pendingWire)) {
@@ -27,7 +26,7 @@ final class InteractionFeedbackResolver {
         }
 
         Vec2 mouseWorld = camera.screenToWorld(new Vec2(mouseX, mouseY), viewport);
-        double searchRadiusWorld = TARGET_PIN_SEARCH_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
+        double searchRadiusWorld = UiMetrics.PIN_HIT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
         PinRef bestRef = null;
         double bestDistance = Double.POSITIVE_INFINITY;
         for (CircuitComponent component : circuit.components()) {
