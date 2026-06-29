@@ -116,10 +116,39 @@ public final class Circuit {
         wires.removeIf(item -> idSet.contains(item.from().componentId()) || idSet.contains(item.to().componentId()));
     }
 
+    public Snapshot snapshot() {
+        List<ComponentSnapshot> componentSnapshots = new ArrayList<>(components.size());
+        for (CircuitComponent component : components) {
+            componentSnapshots.add(new ComponentSnapshot(component.id(), component.kind(),
+                    component.bounds().x(), component.bounds().y(), component.sourceActive()));
+        }
+        return new Snapshot(List.copyOf(componentSnapshots), List.copyOf(wires), nextComponentId);
+    }
+
+    public void restore(Snapshot snapshot) {
+        components.clear();
+        wires.clear();
+
+        for (ComponentSnapshot state : snapshot.components()) {
+            CircuitComponent component = new CircuitComponent(state.id(), state.kind(), state.x(), state.y());
+            component.setSourceActive(state.sourceActive());
+            components.add(component);
+        }
+
+        wires.addAll(snapshot.wires());
+        nextComponentId = snapshot.nextComponentId();
+    }
+
     public void clear() {
         components.clear();
         wires.clear();
         nextComponentId = 1;
+    }
+
+    public record Snapshot(List<ComponentSnapshot> components, List<Wire> wires, int nextComponentId) {
+    }
+
+    public record ComponentSnapshot(int id, ComponentKind kind, double x, double y, boolean sourceActive) {
     }
 
     public record ConnectResult(boolean success, String message) {

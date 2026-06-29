@@ -1,102 +1,33 @@
 package dev.alexis.logika.engine;
 
 import dev.alexis.logika.audio.AudioService;
-import dev.alexis.logika.graphics.Camera2D;
-import dev.alexis.logika.graphics.NanoVGRenderer;
-import dev.alexis.logika.model.Circuit;
-import dev.alexis.logika.model.CircuitComponent;
-import dev.alexis.logika.model.ComponentKind;
-import dev.alexis.logika.model.PinDirection;
-import dev.alexis.logika.model.PinEndpoint;
-import dev.alexis.logika.model.PinRef;
-import dev.alexis.logika.model.Wire;
+import dev.alexis.logika.graphics.*;
+import dev.alexis.logika.model.*;
 import dev.alexis.logika.simulation.LogicSimulator;
-import dev.alexis.logika.ui.Tool;
-import dev.alexis.logika.ui.Toolbar;
-import dev.alexis.logika.ui.UiMetrics;
-import dev.alexis.logika.util.Rect;
-import dev.alexis.logika.util.Vec2;
+import dev.alexis.logika.ui.*;
+import dev.alexis.logika.util.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
-import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
-import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MINOR;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_1;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_2;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_3;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_4;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_MOD_SUPER;
-import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
-import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE;
-import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
-import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_CORE_PROFILE;
-import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_FORWARD_COMPAT;
-import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_PROFILE;
-import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM;
-import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM_X11;
-import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
-import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
-import static org.lwjgl.glfw.GLFW.GLFW_STENCIL_BITS;
-import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
-import static org.lwjgl.glfw.GLFW.GLFW_VISIBLE;
-import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
-import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
-import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
-import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
-import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
-import static org.lwjgl.glfw.GLFW.glfwInit;
-import static org.lwjgl.glfw.GLFW.glfwInitHint;
-import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
-import static org.lwjgl.glfw.GLFW.glfwPollEvents;
-import static org.lwjgl.glfw.GLFW.glfwSetCursorPosCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetFramebufferSizeCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetMouseButtonCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetScrollCallback;
-import static org.lwjgl.glfw.GLFW.glfwSetWindowSizeCallback;
-import static org.lwjgl.glfw.GLFW.glfwShowWindow;
-import static org.lwjgl.glfw.GLFW.glfwSwapBuffers;
-import static org.lwjgl.glfw.GLFW.glfwSwapInterval;
-import static org.lwjgl.glfw.GLFW.glfwTerminate;
-import static org.lwjgl.glfw.GLFW.glfwWindowHint;
-import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
-import static org.lwjgl.opengl.GL11.GL_BLEND;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
-import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.glBlendFunc;
-import static org.lwjgl.opengl.GL11.glDisable;
-import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glViewport;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class LogikaEngine {
     private static final int INITIAL_WIDTH = 1280;
     private static final int INITIAL_HEIGHT = 820;
+    private static final int HISTORY_LIMIT = 120;
     private static final double DRAG_THRESHOLD_PX = 7.0;
+    private static final double PIN_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
+    private static final double EDGE_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
+    private static final double PLACEMENT_SLOT_THICKNESS_WORLD = 56.0;
+    private static final double PLACEMENT_SLOT_MARGIN_WORLD = 6.0;
+    private static final double PLACEMENT_CANDIDATE_MARGIN_WORLD = 18.0;
 
     private final Viewport viewport = new Viewport(INITIAL_WIDTH, INITIAL_HEIGHT, INITIAL_WIDTH, INITIAL_HEIGHT);
     private final InputState input = new InputState();
@@ -108,6 +39,8 @@ public final class LogikaEngine {
     private final AudioService audio = new AudioService();
     private final Set<Integer> selectedComponentIds = new LinkedHashSet<>();
     private final Map<Integer, Vec2> groupDragStartCenters = new LinkedHashMap<>();
+    private final Deque<UndoableEdit> undoStack = new ArrayDeque<>();
+    private final Deque<UndoableEdit> redoStack = new ArrayDeque<>();
 
     private GLFWErrorCallback errorCallback;
     private long window = NULL;
@@ -117,18 +50,21 @@ public final class LogikaEngine {
     private int hoveredComponentId = -1;
     private int pressedButtonId = -1;
     private int dragCandidateId = -1;
+    private int chainClickCandidateId = -1;
     private boolean draggingComponent;
     private boolean componentPressSelectionOnly;
     private Vec2 dragOffsetFromCenter = new Vec2(0.0, 0.0);
     private double pressScreenX;
     private double pressScreenY;
+    private EditorSnapshot dragStartSnapshot;
+    private EditorSnapshot chainStartSnapshot;
     private boolean marqueeCandidate;
     private boolean marqueeSelecting;
     private boolean marqueeAdditive;
     private Vec2 marqueeStartWorld = new Vec2(0.0, 0.0);
     private Vec2 marqueeEndWorld = new Vec2(0.0, 0.0);
     private boolean simulationRunning = true;
-    private String status = "Drag empty grid to select, Ctrl+C/V copies blocks, and click a node then a component to chain.";
+    private String status = "Pick a placement tool for slots, or interact directly with pins and components.";
     private ChainVariant chainVariant = ChainVariant.AUTO;
     private List<ClipboardComponent> clipboardComponents = List.of();
     private List<ClipboardWire> clipboardWires = List.of();
@@ -147,11 +83,7 @@ public final class LogikaEngine {
         errorCallback = GLFWErrorCallback.createPrint(System.err);
         glfwSetErrorCallback(errorCallback);
         applyLinuxWaylandX11Hint();
-
-        if (!glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW.");
-        }
-
+        if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW.");
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -160,20 +92,14 @@ public final class LogikaEngine {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
         glfwWindowHint(GLFW_STENCIL_BITS, 8);
-
-        window = glfwCreateWindow(INITIAL_WIDTH, INITIAL_HEIGHT, "Logika 1.1", NULL, NULL);
-        if (window == NULL) {
-            throw new IllegalStateException("Unable to create GLFW window.");
-        }
-
+        window = glfwCreateWindow(INITIAL_WIDTH, INITIAL_HEIGHT, "Logika 1.2", NULL, NULL);
+        if (window == NULL) throw new IllegalStateException("Unable to create GLFW window.");
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1);
         GL.createCapabilities();
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_DEPTH_TEST);
-
         refreshViewport();
         installCallbacks();
         renderer.init();
@@ -183,14 +109,11 @@ public final class LogikaEngine {
 
     private void loop() {
         while (!glfwWindowShouldClose(window)) {
-            if (simulationRunning) {
-                simulator.tick(circuit);
-            }
-
-            renderer.render(viewport, camera, circuit, toolbar, tool, pendingWire, selectedComponentIds,
+            if (simulationRunning) simulator.tick(circuit);
+            renderer.render(viewport, camera, circuit, toolbar, tool, placementPreviews(), pendingWire, selectedComponentIds,
                     hoveredComponentId, draggingComponent, activeSelectionRect(), simulationRunning, status,
-                    input.mouseX(), input.mouseY(), clipboardComponents.size(), chainVariant.label());
-
+                    input.mouseX(), input.mouseY(), clipboardComponents.size(), chainVariant.label(),
+                    undoStack.size(), redoStack.size());
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
@@ -198,70 +121,56 @@ public final class LogikaEngine {
 
     private void installCallbacks() {
         glfwSetWindowSizeCallback(window, (handle, width, height) -> viewport.setWindowSize(width, height));
-
         glfwSetFramebufferSizeCallback(window, (handle, width, height) -> {
             viewport.setFramebufferSize(width, height);
             glViewport(0, 0, viewport.framebufferWidth(), viewport.framebufferHeight());
         });
-
         glfwSetCursorPosCallback(window, (handle, x, y) -> {
             double previousX = input.mouseX();
             double previousY = input.mouseY();
-            if (input.panning()) {
-                camera.panByScreenDelta(x - previousX, y - previousY);
-            }
+            if (input.panning()) camera.panByScreenDelta(x - previousX, y - previousY);
             input.setMouse(x, y);
-
-            if (input.leftDown() && dragCandidateId != -1) {
-                updateComponentDrag(x, y);
-            } else if (input.leftDown() && marqueeCandidate) {
-                updateMarqueeSelection(x, y);
-            }
+            if (input.leftDown() && dragCandidateId != -1) updateComponentDrag(x, y);
+            else if (input.leftDown() && marqueeCandidate) updateMarqueeSelection(x, y);
             updateHoverState();
         });
-
         glfwSetScrollCallback(window, (handle, offsetX, offsetY) -> {
-            if (toolbar.contains(input.mouseY(), viewport.windowHeight())) {
-                return;
-            }
-            double factor = Math.pow(1.12, offsetY);
-            camera.zoomAt(input.mouseX(), input.mouseY(), factor, viewport);
+            if (toolbar.contains(input.mouseY(), viewport.windowHeight())) return;
+            camera.zoomAt(input.mouseX(), input.mouseY(), Math.pow(1.12, offsetY), viewport);
             updateHoverState();
         });
-
         glfwSetMouseButtonCallback(window, (handle, button, action, mods) -> {
             if (button == GLFW_MOUSE_BUTTON_LEFT) {
                 input.setLeftDown(action == GLFW_PRESS);
                 if (action == GLFW_PRESS) {
-                    if (input.spaceDown()) {
-                        input.setPanning(true);
-                    } else {
-                        handlePrimaryPress(mods);
-                    }
-                } else if (action == GLFW_RELEASE) {
-                    handlePrimaryRelease();
-                }
+                    if (input.spaceDown()) input.setPanning(true);
+                    else handlePrimaryPress(mods);
+                } else if (action == GLFW_RELEASE) handlePrimaryRelease();
             }
-
             if (button == GLFW_MOUSE_BUTTON_RIGHT || button == GLFW_MOUSE_BUTTON_MIDDLE) {
                 input.setPanDown(action == GLFW_PRESS);
                 input.setPanning(action == GLFW_PRESS);
             }
         });
-
         glfwSetKeyCallback(window, (handle, key, scancode, action, mods) -> {
+            updateModifierState(key, action);
             if (key == GLFW_KEY_SPACE) {
                 input.setSpaceDown(action != GLFW_RELEASE);
-                if (action == GLFW_RELEASE && input.panning() && !input.panDown()) {
-                    input.setPanning(false);
-                }
+                if (action == GLFW_RELEASE && input.panning() && !input.panDown()) input.setPanning(false);
                 return;
             }
-
-            if (action == GLFW_PRESS) {
-                handleKeyPress(key, mods);
-            }
+            if (action == GLFW_PRESS) handleKeyPress(key, mods);
         });
+    }
+
+    private void updateModifierState(int key, int action) {
+        boolean down = action != GLFW_RELEASE;
+        switch (key) {
+            case GLFW_KEY_LEFT_CONTROL, GLFW_KEY_RIGHT_CONTROL -> input.setControlDown(down);
+            case GLFW_KEY_LEFT_ALT, GLFW_KEY_RIGHT_ALT -> input.setAltDown(down);
+            case GLFW_KEY_LEFT_SHIFT, GLFW_KEY_RIGHT_SHIFT -> input.setShiftDown(down);
+            default -> { }
+        }
     }
 
     private void handlePrimaryPress(int mods) {
@@ -270,38 +179,29 @@ public final class LogikaEngine {
             handleToolbarAction(action.get());
             return;
         }
-        if (toolbar.contains(input.mouseY(), viewport.windowHeight())) {
-            return;
-        }
-
+        if (toolbar.contains(input.mouseY(), viewport.windowHeight())) return;
+        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
+        if (tool.isPlacement() && tryPlaceFromSlot(world)) return;
         Optional<CircuitComponent> trashTarget = findTrashTarget(input.mouseX(), input.mouseY());
         if (trashTarget.isPresent()) {
             deleteFromTrash(trashTarget.get());
             return;
         }
-
-        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
-
         Optional<PinEndpoint> pin = circuit.findPin(world, pinHitRadiusWorld());
         if (pin.isPresent()) {
             handlePinClick(pin.get());
             return;
         }
-
         Optional<CircuitComponent> component = circuit.findComponent(world);
         if (component.isPresent()) {
-            if (pendingWire != null && tryChainToComponent(component.get())) {
-                return;
-            }
-            beginComponentPress(component.get(), world, hasSelectionModifier(mods));
+            beginComponentPress(component.get(), world, hasSelectionModifier(mods),
+                    pendingWire != null && !hasSelectionModifier(mods) && !tool.isPlacement());
             return;
         }
-
         if (tool.isPlacement()) {
-            placeComponent(world);
+            placeFromEmptyCanvas(world);
             return;
         }
-
         beginMarqueeSelection(world, hasSelectionModifier(mods));
     }
 
@@ -309,19 +209,13 @@ public final class LogikaEngine {
         if (dragCandidateId != -1) {
             Optional<CircuitComponent> component = circuit.componentById(dragCandidateId);
             if (draggingComponent) {
-                status = selectedComponentIds.size() > 1
-                        ? selectedComponentIds.size() + " components moved."
-                        : "Component moved.";
+                if (dragStartSnapshot != null) recordEdit("Move selection", dragStartSnapshot);
+                status = selectedComponentIds.size() > 1 ? selectedComponentIds.size() + " components moved." : "Component moved.";
                 audio.playClick(true);
-            } else if (!componentPressSelectionOnly) {
-                component.ifPresent(this::performComponentClick);
-            } else {
-                status = selectionSummary();
-            }
-        } else if (marqueeCandidate) {
-            finishMarqueeSelection();
-        }
-
+            } else if (chainClickCandidateId != -1) component.ifPresent(this::tryChainToComponent);
+            else if (!componentPressSelectionOnly) component.ifPresent(this::performComponentClick);
+            else status = selectionSummary();
+        } else if (marqueeCandidate) finishMarqueeSelection();
         if (pressedButtonId != -1) {
             circuit.componentById(pressedButtonId).ifPresent(component -> component.setSourceActive(false));
             pressedButtonId = -1;
@@ -330,20 +224,37 @@ public final class LogikaEngine {
                 audio.playClick(false);
             }
         }
-
         dragCandidateId = -1;
+        chainClickCandidateId = -1;
         draggingComponent = false;
         componentPressSelectionOnly = false;
+        dragStartSnapshot = null;
+        chainStartSnapshot = null;
         groupDragStartCenters.clear();
         marqueeCandidate = false;
         marqueeSelecting = false;
-        if (!input.panDown()) {
-            input.setPanning(false);
-        }
+        if (!input.panDown()) input.setPanning(false);
         updateHoverState();
     }
 
-    private void beginComponentPress(CircuitComponent component, Vec2 world, boolean selectionModifier) {
+    private void beginComponentPress(CircuitComponent component, Vec2 world, boolean selectionModifier, boolean chainCandidate) {
+        chainClickCandidateId = -1;
+        chainStartSnapshot = null;
+        if (chainCandidate) {
+            chainStartSnapshot = snapshotEditor();
+            selectOnly(component.id());
+            chainClickCandidateId = component.id();
+            dragCandidateId = component.id();
+            draggingComponent = false;
+            pressScreenX = input.mouseX();
+            pressScreenY = input.mouseY();
+            dragOffsetFromCenter = world.subtract(component.center());
+            rememberGroupDragStartCenters();
+            dragStartSnapshot = snapshotEditor();
+            status = "Release to chain to this component, or drag to move it.";
+            audio.playClick(true);
+            return;
+        }
         if (selectionModifier) {
             boolean selected = toggleComponentSelection(component.id());
             componentPressSelectionOnly = true;
@@ -355,35 +266,27 @@ public final class LogikaEngine {
             }
         } else {
             componentPressSelectionOnly = false;
-            if (!selectedComponentIds.contains(component.id())) {
-                selectOnly(component.id());
-            } else {
-                selectedComponentId = component.id();
-            }
+            if (!selectedComponentIds.contains(component.id())) selectOnly(component.id());
+            else selectedComponentId = component.id();
         }
-
         dragCandidateId = component.id();
         draggingComponent = false;
         pressScreenX = input.mouseX();
         pressScreenY = input.mouseY();
         dragOffsetFromCenter = world.subtract(component.center());
         rememberGroupDragStartCenters();
-
+        dragStartSnapshot = snapshotEditor();
         if (componentPressSelectionOnly) {
             status = selectionSummary();
             return;
         }
-
         if (component.kind() == ComponentKind.BUTTON) {
             component.setSourceActive(true);
             pressedButtonId = component.id();
             status = "Button active while held. Move the pointer to drag it instead.";
             audio.playClick(true);
-        } else if (component.kind() == ComponentKind.SWITCH) {
-            status = "Release to toggle, or drag the selected block to move it.";
-        } else {
-            status = component.kind().label() + " selected. Drag to move the selected block.";
-        }
+        } else if (component.kind() == ComponentKind.SWITCH) status = "Release to toggle, or drag the selected block to move it.";
+        else status = component.kind().label() + " selected. Drag to move the selected block.";
     }
 
     private void updateComponentDrag(double screenX, double screenY) {
@@ -395,16 +298,11 @@ public final class LogikaEngine {
                 pressedButtonId = -1;
             }
         }
-
-        if (!draggingComponent) {
-            return;
-        }
-
+        if (!draggingComponent) return;
         Vec2 mouseWorld = camera.screenToWorld(new Vec2(screenX, screenY), viewport);
         Vec2 targetCenter = snap(mouseWorld.subtract(dragOffsetFromCenter));
         Vec2 originalCenter = groupDragStartCenters.getOrDefault(dragCandidateId, targetCenter);
         Vec2 delta = targetCenter.subtract(originalCenter);
-
         for (Map.Entry<Integer, Vec2> entry : groupDragStartCenters.entrySet()) {
             circuit.componentById(entry.getKey()).ifPresent(component -> component.setCenter(snap(entry.getValue().add(delta))));
         }
@@ -413,18 +311,15 @@ public final class LogikaEngine {
 
     private void performComponentClick(CircuitComponent component) {
         selectedComponentId = component.id();
-
         if (component.kind() == ComponentKind.SWITCH) {
+            EditorSnapshot before = snapshotEditor();
             component.setSourceActive(!component.sourceActive());
+            recordEdit("Toggle switch", before);
             status = "Switch set to " + (component.sourceActive() ? "true." : "false.");
             audio.playClick(component.sourceActive());
             return;
         }
-
-        if (component.kind() == ComponentKind.BUTTON) {
-            return;
-        }
-
+        if (component.kind() == ComponentKind.BUTTON) return;
         status = component.kind().label() + " selected.";
         audio.playClick(true);
     }
@@ -441,11 +336,18 @@ public final class LogikaEngine {
                 audio.playClick(simulationRunning);
             }
             case CLEAR -> {
+                if (circuit.components().isEmpty()) {
+                    status = "Grid is already empty.";
+                    audio.playClick(false);
+                    return;
+                }
+                EditorSnapshot before = snapshotEditor();
                 circuit.clear();
                 pendingWire = null;
                 clearSelection();
                 hoveredComponentId = -1;
                 tool = Tool.INTERACT;
+                recordEdit("Clear grid", before);
                 status = "Grid cleared.";
                 audio.playClick(false);
             }
@@ -457,27 +359,40 @@ public final class LogikaEngine {
         pendingWire = null;
         status = switch (nextTool) {
             case INTERACT -> "Interact directly: select, copy, drag, click nodes, or use sources.";
-            case PLACE_BUTTON -> "Click an empty grid cell to place a momentary button.";
-            case PLACE_SWITCH -> "Click an empty grid cell to place a toggle switch.";
-            case PLACE_NAND -> "Click an empty grid cell to place a NAND gate.";
-            case PLACE_LED -> "Click an empty grid cell to place a LED indicator.";
+            case PLACE_BUTTON, PLACE_SWITCH, PLACE_NAND, PLACE_LED ->
+                    "Hover a component for dark + slots; hover a slot to preview; click the slot to place.";
         };
         audio.playClick(true);
     }
 
-    private void placeComponent(Vec2 world) {
+    private boolean tryPlaceFromSlot(Vec2 world) {
         ComponentKind kind = tool.componentKind().orElseThrow();
-        Vec2 snapped = snap(world);
-        Rect candidate = componentBounds(kind, snapped);
-        if (collidesWithExistingComponent(candidate)) {
-            status = "Placement blocked: another component already occupies this area.";
+        Optional<PlacementCandidate> candidate = placementSlotAt(kind, world);
+        if (candidate.isEmpty()) return false;
+        pendingWire = null;
+        placeComponent(kind, candidate.get());
+        return true;
+    }
+
+    private void placeFromEmptyCanvas(Vec2 world) {
+        pendingWire = null;
+        ComponentKind kind = tool.componentKind().orElseThrow();
+        Vec2 center = placementCenter(kind, world);
+        if (collidesWithExistingComponent(componentBounds(kind, center))) {
+            status = "Placement blocked: use a visible dark + slot or an empty grid area.";
             audio.playClick(false);
             return;
         }
-        CircuitComponent component = circuit.addComponent(kind, snapped);
+        placeComponent(kind, new PlacementCandidate(center, placementAlignment().label(), null, null));
+    }
+
+    private void placeComponent(ComponentKind kind, PlacementCandidate candidate) {
+        EditorSnapshot before = snapshotEditor();
+        CircuitComponent component = circuit.addComponent(kind, candidate.center());
         selectOnly(component.id());
         hoveredComponentId = component.id();
-        status = kind.label() + " placed. Click its output, then another component, to chain quickly.";
+        recordEdit("Place " + kind.label(), before);
+        status = kind.label() + " placed with " + candidate.label() + " placement.";
         audio.playClick(true);
     }
 
@@ -485,22 +400,20 @@ public final class LogikaEngine {
         if (pendingWire == null) {
             pendingWire = pin.ref();
             selectOnly(pin.ref().componentId());
-            status = pin.ref().isOutput()
-                    ? "Output node selected. Click a compatible input or component body."
+            status = pin.ref().isOutput() ? "Output node selected. Click a compatible input or component body."
                     : "Input node selected. Click a compatible output node.";
             audio.playClick(true);
             return;
         }
-
         if (pendingWire.equals(pin.ref())) {
             pendingWire = null;
             status = "Node selection cancelled.";
             audio.playClick(false);
             return;
         }
-
         Circuit.ConnectResult result;
         PinRef inputRef;
+        EditorSnapshot before = snapshotEditor();
         if (pendingWire.isOutput() && pin.ref().isInput()) {
             result = circuit.connect(pendingWire, pin.ref());
             inputRef = pin.ref();
@@ -510,41 +423,35 @@ public final class LogikaEngine {
         } else {
             pendingWire = pin.ref();
             selectOnly(pin.ref().componentId());
-            status = pin.ref().isOutput()
-                    ? "Output node selected. Click a compatible input or component body."
+            status = pin.ref().isOutput() ? "Output node selected. Click a compatible input or component body."
                     : "Input node selected. Click a compatible output node.";
             audio.playClick(true);
             return;
         }
-
-        finishConnection(result, inputRef);
+        finishConnection(result, inputRef, before, "Connect pins");
     }
 
     private boolean tryChainToComponent(CircuitComponent component) {
-        if (pendingWire == null || pendingWire.componentId() == component.id()) {
-            return false;
-        }
-
+        if (pendingWire == null || pendingWire.componentId() == component.id()) return false;
         if (pendingWire.isOutput()) {
             if (component.kind().inputCount() == 0) {
                 status = component.kind().label() + " has no input node for chaining.";
                 audio.playClick(false);
                 return true;
             }
+            EditorSnapshot before = chainStartSnapshot != null ? chainStartSnapshot : snapshotEditor();
             List<Integer> inputIndexes = chainVariant.inputIndexesFor(component, this::inputConnected);
             int success = 0;
             String lastMessage = "No compatible input.";
             for (int inputIndex : inputIndexes) {
-                PinRef inputRef = new PinRef(component.id(), PinDirection.INPUT, inputIndex);
-                Circuit.ConnectResult result = circuit.connect(pendingWire, inputRef);
+                Circuit.ConnectResult result = circuit.connect(pendingWire, new PinRef(component.id(), PinDirection.INPUT, inputIndex));
                 lastMessage = result.message();
-                if (result.success()) {
-                    success++;
-                }
+                if (result.success()) success++;
             }
             if (success > 0) {
                 selectOnly(component.id());
                 pendingWire = firstOutputRef(component).orElse(null);
+                recordEdit("Chain component", before);
                 status = "Chain linked to " + component.kind().label() + " " + chainVariant.inputLabel(inputIndexes)
                         + (pendingWire == null ? "." : "; output kept for next link.");
                 audio.playClick(true);
@@ -554,30 +461,27 @@ public final class LogikaEngine {
             }
             return true;
         }
-
         if (pendingWire.isInput()) {
             if (component.kind().outputCount() == 0) {
                 status = component.kind().label() + " has no output node for chaining.";
                 audio.playClick(false);
                 return true;
             }
-            PinRef outputRef = new PinRef(component.id(), PinDirection.OUTPUT, 0);
-            Circuit.ConnectResult result = circuit.connect(outputRef, pendingWire);
-            finishConnection(result, pendingWire);
+            EditorSnapshot before = chainStartSnapshot != null ? chainStartSnapshot : snapshotEditor();
+            Circuit.ConnectResult result = circuit.connect(new PinRef(component.id(), PinDirection.OUTPUT, 0), pendingWire);
+            finishConnection(result, pendingWire, before, "Chain component");
             return true;
         }
-
         return false;
     }
 
-    private void finishConnection(Circuit.ConnectResult result, PinRef inputRef) {
+    private void finishConnection(Circuit.ConnectResult result, PinRef inputRef, EditorSnapshot before, String label) {
         if (result.success()) {
             selectOnly(inputRef.componentId());
             pendingWire = circuit.componentById(inputRef.componentId()).flatMap(this::firstOutputRef).orElse(null);
+            recordEdit(label, before);
             status = result.message() + (pendingWire == null ? "" : " Output kept for chaining.");
-        } else {
-            status = result.message();
-        }
+        } else status = result.message();
         audio.playClick(result.success());
     }
 
@@ -598,34 +502,29 @@ public final class LogikaEngine {
                 audio.playClick(simulationRunning);
             }
             case GLFW_KEY_C -> {
-                if (shortcut) {
-                    copySelection();
-                } else {
+                if (shortcut) copySelection();
+                else {
                     camera.reset();
                     updateHoverState();
                     status = "Camera re-centered.";
                 }
             }
             case GLFW_KEY_V -> {
-                if (shortcut) {
-                    pasteClipboard();
-                } else {
+                if (shortcut) pasteClipboard();
+                else {
                     chainVariant = chainVariant.next();
                     status = "Chain variant: " + chainVariant.description() + ".";
                     audio.playClick(true);
                 }
             }
-            case GLFW_KEY_D -> {
-                if (shortcut) {
-                    duplicateSelection();
-                }
-            }
+            case GLFW_KEY_D -> { if (shortcut) duplicateSelection(); }
+            case GLFW_KEY_Z -> { if (shortcut && (mods & GLFW_MOD_SHIFT) != 0) redo(); else if (shortcut) undo(); }
+            case GLFW_KEY_Y -> { if (shortcut) redo(); }
             case GLFW_KEY_1 -> setTool(Tool.PLACE_BUTTON);
             case GLFW_KEY_2 -> setTool(Tool.PLACE_SWITCH);
             case GLFW_KEY_3 -> setTool(Tool.PLACE_NAND);
             case GLFW_KEY_4 -> setTool(Tool.PLACE_LED);
-            default -> {
-            }
+            default -> { }
         }
     }
 
@@ -643,12 +542,9 @@ public final class LogikaEngine {
             deleteSelectedComponents();
             return;
         }
-
+        EditorSnapshot before = snapshotEditor();
         int id = target.id();
-        if (pressedButtonId == id) {
-            target.setSourceActive(false);
-            pressedButtonId = -1;
-        }
+        if (pressedButtonId == id) pressedButtonId = -1;
         dragCandidateId = -1;
         draggingComponent = false;
         circuit.removeComponent(id);
@@ -656,6 +552,7 @@ public final class LogikaEngine {
         syncPrimarySelection();
         hoveredComponentId = -1;
         pendingWire = null;
+        recordEdit("Delete component", before);
         status = "Component deleted from hover trash icon.";
         audio.playClick(false);
     }
@@ -664,10 +561,7 @@ public final class LogikaEngine {
         List<CircuitComponent> components = circuit.components();
         for (int i = components.size() - 1; i >= 0; i--) {
             CircuitComponent component = components.get(i);
-            Rect icon = trashIconRect(component);
-            if (icon.contains(mouseX, mouseY)) {
-                return Optional.of(component);
-            }
+            if (trashIconRect(component).contains(mouseX, mouseY)) return Optional.of(component);
         }
         return Optional.empty();
     }
@@ -713,18 +607,10 @@ public final class LogikaEngine {
             }
             return;
         }
-
         Rect selection = normalizedRect(marqueeStartWorld, marqueeEndWorld);
         List<Integer> hits = new ArrayList<>();
-        for (CircuitComponent component : circuit.components()) {
-            if (overlaps(selection, component.bounds())) {
-                hits.add(component.id());
-            }
-        }
-
-        if (!marqueeAdditive) {
-            selectedComponentIds.clear();
-        }
+        for (CircuitComponent component : circuit.components()) if (overlaps(selection, component.bounds())) hits.add(component.id());
+        if (!marqueeAdditive) selectedComponentIds.clear();
         selectedComponentIds.addAll(hits);
         syncPrimarySelection();
         status = hits.isEmpty() ? "No component in selection area." : selectionSummary();
@@ -741,21 +627,16 @@ public final class LogikaEngine {
             audio.playClick(false);
             return;
         }
-
         List<ClipboardComponent> components = new ArrayList<>();
         for (CircuitComponent component : circuit.components()) {
-            if (selectedComponentIds.contains(component.id())) {
-                components.add(new ClipboardComponent(component.id(), component.kind(), component.center(), component.sourceActive()));
-            }
+            if (selectedComponentIds.contains(component.id())) components.add(new ClipboardComponent(component.id(), component.kind(), component.center(), component.sourceActive()));
         }
-
         List<ClipboardWire> wires = new ArrayList<>();
         for (Wire wire : circuit.wires()) {
             if (selectedComponentIds.contains(wire.from().componentId()) && selectedComponentIds.contains(wire.to().componentId())) {
                 wires.add(new ClipboardWire(wire.from().componentId(), wire.from().index(), wire.to().componentId(), wire.to().index()));
             }
         }
-
         clipboardComponents = List.copyOf(components);
         clipboardWires = List.copyOf(wires);
         pasteSequence = 0;
@@ -769,34 +650,36 @@ public final class LogikaEngine {
             audio.playClick(false);
             return;
         }
-
         Vec2 copyAnchor = clipboardAnchor();
         Vec2 offset = choosePasteOffset(copyAnchor);
+        if (pasteWouldCollide(offset)) {
+            status = "Paste blocked: no nearby free space found.";
+            audio.playClick(false);
+            return;
+        }
+        EditorSnapshot before = snapshotEditor();
         Map<Integer, Integer> idMap = new HashMap<>();
         Set<Integer> pastedIds = new LinkedHashSet<>();
-
         for (ClipboardComponent item : clipboardComponents) {
             CircuitComponent pasted = circuit.addComponent(item.kind(), snap(item.center().add(offset)));
             pasted.setSourceActive(item.sourceActive());
             idMap.put(item.sourceId(), pasted.id());
             pastedIds.add(pasted.id());
         }
-
         for (ClipboardWire wire : clipboardWires) {
             Integer fromId = idMap.get(wire.fromComponentId());
             Integer toId = idMap.get(wire.toComponentId());
             if (fromId != null && toId != null) {
-                circuit.connect(new PinRef(fromId, PinDirection.OUTPUT, wire.fromIndex()),
-                        new PinRef(toId, PinDirection.INPUT, wire.toIndex()));
+                circuit.connect(new PinRef(fromId, PinDirection.OUTPUT, wire.fromIndex()), new PinRef(toId, PinDirection.INPUT, wire.toIndex()));
             }
         }
-
         selectedComponentIds.clear();
         selectedComponentIds.addAll(pastedIds);
         syncPrimarySelection();
         pendingWire = null;
         tool = Tool.INTERACT;
         pasteSequence++;
+        recordEdit("Paste block", before);
         status = "Pasted " + pastedIds.size() + " component(s) with preserved internal wiring.";
         audio.playClick(true);
     }
@@ -823,12 +706,9 @@ public final class LogikaEngine {
 
     private Vec2 choosePasteOffset(Vec2 copyAnchor) {
         Vec2 mouseWorld = snap(camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport));
-        Vec2 offset = mouseWorld.subtract(copyAnchor)
-                .add(new Vec2(pasteSequence * UiMetrics.GRID_SIZE, pasteSequence * UiMetrics.GRID_SIZE));
+        Vec2 offset = mouseWorld.subtract(copyAnchor).add(new Vec2(pasteSequence * UiMetrics.GRID_SIZE, pasteSequence * UiMetrics.GRID_SIZE));
         for (int attempt = 0; attempt < 16; attempt++) {
-            if (!pasteWouldCollide(offset)) {
-                return offset;
-            }
+            if (!pasteWouldCollide(offset)) return offset;
             offset = offset.add(new Vec2(UiMetrics.GRID_SIZE, UiMetrics.GRID_SIZE));
         }
         return offset;
@@ -836,10 +716,7 @@ public final class LogikaEngine {
 
     private boolean pasteWouldCollide(Vec2 offset) {
         for (ClipboardComponent item : clipboardComponents) {
-            Rect candidate = componentBounds(item.kind(), snap(item.center().add(offset)));
-            if (collidesWithExistingComponent(candidate)) {
-                return true;
-            }
+            if (collidesWithExistingComponent(componentBounds(item.kind(), snap(item.center().add(offset))))) return true;
         }
         return false;
     }
@@ -850,27 +727,212 @@ public final class LogikaEngine {
             audio.playClick(false);
             return;
         }
+        EditorSnapshot before = snapshotEditor();
         List<Integer> ids = new ArrayList<>(selectedComponentIds);
-        if (ids.contains(pressedButtonId)) {
-            pressedButtonId = -1;
-        }
+        if (ids.contains(pressedButtonId)) pressedButtonId = -1;
         circuit.removeComponents(ids);
         clearSelection();
         pendingWire = null;
         dragCandidateId = -1;
         draggingComponent = false;
         hoveredComponentId = -1;
+        recordEdit("Delete selection", before);
         status = ids.size() == 1 ? "Component deleted." : ids.size() + " components deleted.";
         audio.playClick(false);
     }
 
-    private void rememberGroupDragStartCenters() {
-        groupDragStartCenters.clear();
+    private List<PlacementPreview> placementPreviews() {
+        if (!tool.isPlacement() || toolbar.contains(input.mouseY(), viewport.windowHeight()) || input.leftDown() || input.panning()) return List.of();
+        ComponentKind kind = tool.componentKind().orElseThrow();
+        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
+        Optional<CircuitComponent> hoveredComponent = circuit.findComponent(world);
+        if (hoveredComponent.isPresent()) return slotPreviewsFor(kind, hoveredComponent.get(), world);
+        Optional<PlacementCandidate> hoveredSlot = placementSlotAt(kind, world);
+        if (hoveredSlot.isPresent()) return slotPreviewsFor(kind, componentBySlot(kind, hoveredSlot.get()).orElse(null), world);
+        Vec2 center = placementCenter(kind, world);
+        Rect bounds = componentBounds(kind, center);
+        return collidesWithExistingComponent(bounds) ? List.of() : List.of(new PlacementPreview(kind, bounds, placementAlignment().label()));
+    }
+
+    private List<PlacementPreview> slotPreviewsFor(ComponentKind kind, CircuitComponent component, Vec2 mouseWorld) {
+        if (component == null) return List.of();
+        List<PlacementPreview> previews = new ArrayList<>();
+        for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
+            boolean hovered = candidate.slotBounds().contains(mouseWorld);
+            previews.add(new PlacementPreview(kind, candidate.slotBounds(), candidate.label(), true, hovered));
+            if (hovered) previews.add(new PlacementPreview(kind, componentBounds(kind, candidate.center()), candidate.label(), false, true));
+        }
+        return previews;
+    }
+
+    private Optional<CircuitComponent> componentBySlot(ComponentKind kind, PlacementCandidate slot) {
         for (CircuitComponent component : circuit.components()) {
-            if (selectedComponentIds.contains(component.id())) {
-                groupDragStartCenters.put(component.id(), component.center());
+            for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
+                if (candidate.side() == slot.side() && candidate.center().equals(slot.center())) return Optional.of(component);
             }
         }
+        return Optional.empty();
+    }
+
+    private Optional<PlacementCandidate> placementSlotAt(ComponentKind kind, Vec2 world) {
+        for (CircuitComponent component : circuit.components()) {
+            for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
+                if (candidate.slotBounds().contains(world)) return Optional.of(candidate);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private List<PlacementCandidate> adjacentPlacementCandidates(ComponentKind kind, CircuitComponent target) {
+        List<PlacementCandidate> candidates = new ArrayList<>(4);
+        Rect targetBounds = target.bounds();
+        for (PlacementSide side : PlacementSide.values()) {
+            Rect slotBounds = side.slotBounds(targetBounds);
+            Vec2 center = side.candidateCenter(kind, targetBounds);
+            if (!collidesWithExistingComponent(componentBounds(kind, center)) && !slotCollidesWithOtherComponent(slotBounds, target.id())) {
+                candidates.add(new PlacementCandidate(center, side.label(), side, slotBounds));
+            }
+        }
+        return candidates;
+    }
+
+    private boolean slotCollidesWithOtherComponent(Rect slotBounds, int sourceComponentId) {
+        for (CircuitComponent component : circuit.components()) {
+            if (component.id() != sourceComponentId && overlaps(slotBounds, component.bounds())) return true;
+        }
+        return false;
+    }
+
+    private Vec2 placementCenter(ComponentKind kind, Vec2 rawWorld) {
+        return switch (placementAlignment()) {
+            case FREE -> rawWorld;
+            case GRID -> snap(rawWorld);
+            case PIN_ROW -> alignPinsOnHorizontalAxis(kind, snap(rawWorld));
+            case EDGE_COLUMN -> alignEdgesWithComponentsAbove(kind, snap(rawWorld));
+        };
+    }
+
+    private PlacementAlignment placementAlignment() {
+        if (input.controlDown() && input.altDown()) return PlacementAlignment.EDGE_COLUMN;
+        if (input.controlDown()) return PlacementAlignment.PIN_ROW;
+        if (input.altDown()) return PlacementAlignment.FREE;
+        return PlacementAlignment.GRID;
+    }
+
+    private Vec2 alignPinsOnHorizontalAxis(ComponentKind kind, Vec2 center) {
+        double bestDelta = 0.0;
+        double bestDistance = Double.POSITIVE_INFINITY;
+        for (PinEndpoint candidatePin : pinsFor(kind, center)) {
+            for (CircuitComponent existingComponent : circuit.components()) {
+                for (PinEndpoint existingPin : existingComponent.pins()) {
+                    if (!oppositeDirections(candidatePin.ref(), existingPin.ref())) continue;
+                    double delta = existingPin.worldPosition().y() - candidatePin.worldPosition().y();
+                    double distance = Math.abs(delta);
+                    if (distance < bestDistance && distance <= PIN_ALIGNMENT_MAX_DELTA_WORLD) {
+                        bestDistance = distance;
+                        bestDelta = delta;
+                    }
+                }
+            }
+        }
+        return bestDistance == Double.POSITIVE_INFINITY ? center : new Vec2(center.x(), center.y() + bestDelta);
+    }
+
+    private Vec2 alignEdgesWithComponentsAbove(ComponentKind kind, Vec2 center) {
+        Rect candidate = componentBounds(kind, center);
+        double bestDelta = 0.0;
+        double bestDistance = Double.POSITIVE_INFINITY;
+        for (CircuitComponent component : circuit.components()) {
+            if (component.center().y() >= center.y()) continue;
+            Rect existing = component.bounds();
+            double[] deltas = {existing.x() - candidate.x(), existing.x() + existing.width() - candidate.x() - candidate.width()};
+            for (double delta : deltas) {
+                double distance = Math.abs(delta);
+                if (distance < bestDistance && distance <= EDGE_ALIGNMENT_MAX_DELTA_WORLD) {
+                    bestDistance = distance;
+                    bestDelta = delta;
+                }
+            }
+        }
+        return bestDistance == Double.POSITIVE_INFINITY ? center : new Vec2(center.x() + bestDelta, center.y());
+    }
+
+    private List<PinEndpoint> pinsFor(ComponentKind kind, Vec2 center) {
+        return new CircuitComponent(-1, kind, center.x() - kind.width() / 2.0, center.y() - kind.height() / 2.0).pins();
+    }
+
+    private static boolean oppositeDirections(PinRef a, PinRef b) {
+        return a.direction() != b.direction();
+    }
+
+    private void undo() {
+        if (undoStack.isEmpty()) {
+            status = "Nothing to undo.";
+            audio.playClick(false);
+            return;
+        }
+        UndoableEdit edit = undoStack.removeLast();
+        restoreEditor(edit.before());
+        redoStack.addLast(edit);
+        status = "Undo: " + edit.label() + ".";
+        audio.playClick(false);
+    }
+
+    private void redo() {
+        if (redoStack.isEmpty()) {
+            status = "Nothing to redo.";
+            audio.playClick(false);
+            return;
+        }
+        UndoableEdit edit = redoStack.removeLast();
+        restoreEditor(edit.after());
+        undoStack.addLast(edit);
+        status = "Redo: " + edit.label() + ".";
+        audio.playClick(true);
+    }
+
+    private void recordEdit(String label, EditorSnapshot before) {
+        EditorSnapshot after = snapshotEditor();
+        if (before.equals(after)) return;
+        undoStack.addLast(new UndoableEdit(label, before, after));
+        while (undoStack.size() > HISTORY_LIMIT) undoStack.removeFirst();
+        redoStack.clear();
+    }
+
+    private EditorSnapshot snapshotEditor() {
+        return new EditorSnapshot(circuit.snapshot(), List.copyOf(selectedComponentIds), pendingWire, tool, chainVariant);
+    }
+
+    private void restoreEditor(EditorSnapshot snapshot) {
+        circuit.restore(snapshot.circuit());
+        selectedComponentIds.clear();
+        for (int id : snapshot.selectedIds()) if (circuit.componentById(id).isPresent()) selectedComponentIds.add(id);
+        syncPrimarySelection();
+        pendingWire = validPin(snapshot.pendingWire()) ? snapshot.pendingWire() : null;
+        tool = snapshot.tool();
+        chainVariant = snapshot.chainVariant();
+        pressedButtonId = -1;
+        dragCandidateId = -1;
+        chainClickCandidateId = -1;
+        draggingComponent = false;
+        componentPressSelectionOnly = false;
+        dragStartSnapshot = null;
+        chainStartSnapshot = null;
+        groupDragStartCenters.clear();
+        updateHoverState();
+    }
+
+    private boolean validPin(PinRef ref) {
+        if (ref == null) return false;
+        Optional<CircuitComponent> component = circuit.componentById(ref.componentId());
+        if (component.isEmpty()) return false;
+        int count = ref.isOutput() ? component.get().kind().outputCount() : component.get().kind().inputCount();
+        return ref.index() >= 0 && ref.index() < count;
+    }
+
+    private void rememberGroupDragStartCenters() {
+        groupDragStartCenters.clear();
+        for (CircuitComponent component : circuit.components()) if (selectedComponentIds.contains(component.id())) groupDragStartCenters.put(component.id(), component.center());
     }
 
     private void selectOnly(int componentId) {
@@ -899,9 +961,7 @@ public final class LogikaEngine {
 
     private void syncPrimarySelection() {
         selectedComponentId = -1;
-        for (int id : selectedComponentIds) {
-            selectedComponentId = id;
-        }
+        for (int id : selectedComponentIds) selectedComponentId = id;
     }
 
     private String selectionSummary() {
@@ -913,19 +973,12 @@ public final class LogikaEngine {
     }
 
     private Optional<PinRef> firstOutputRef(CircuitComponent component) {
-        if (component.kind().outputCount() == 0) {
-            return Optional.empty();
-        }
-        return Optional.of(new PinRef(component.id(), PinDirection.OUTPUT, 0));
+        return component.kind().outputCount() == 0 ? Optional.empty() : Optional.of(new PinRef(component.id(), PinDirection.OUTPUT, 0));
     }
 
     private boolean inputConnected(int componentId, int inputIndex) {
         PinRef inputRef = new PinRef(componentId, PinDirection.INPUT, inputIndex);
-        for (Wire wire : circuit.wires()) {
-            if (wire.to().equals(inputRef)) {
-                return true;
-            }
-        }
+        for (Wire wire : circuit.wires()) if (wire.to().equals(inputRef)) return true;
         return false;
     }
 
@@ -939,17 +992,11 @@ public final class LogikaEngine {
     }
 
     private Rect componentBounds(ComponentKind kind, Vec2 center) {
-        return new Rect(center.x() - kind.width() / 2.0, center.y() - kind.height() / 2.0,
-                kind.width(), kind.height());
+        return new Rect(center.x() - kind.width() / 2.0, center.y() - kind.height() / 2.0, kind.width(), kind.height());
     }
 
     private boolean collidesWithExistingComponent(Rect candidate) {
-        for (CircuitComponent component : circuit.components()) {
-            Rect padded = expand(component.bounds(), UiMetrics.COMPONENT_COLLISION_GAP_WORLD);
-            if (overlaps(candidate, padded)) {
-                return true;
-            }
-        }
+        for (CircuitComponent component : circuit.components()) if (overlaps(candidate, expand(component.bounds(), UiMetrics.COMPONENT_COLLISION_GAP_WORLD))) return true;
         return false;
     }
 
@@ -972,20 +1019,15 @@ public final class LogikaEngine {
     }
 
     private static boolean overlaps(Rect a, Rect b) {
-        return a.x() < b.x() + b.width()
-                && a.x() + a.width() > b.x()
-                && a.y() < b.y() + b.height()
-                && a.y() + a.height() > b.y();
+        return a.x() < b.x() + b.width() && a.x() + a.width() > b.x() && a.y() < b.y() + b.height() && a.y() + a.height() > b.y();
     }
 
     private void refreshViewport() {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer w = stack.mallocInt(1);
             IntBuffer h = stack.mallocInt(1);
-
             glfwGetWindowSize(window, w, h);
             viewport.setWindowSize(w.get(0), h.get(0));
-
             glfwGetFramebufferSize(window, w, h);
             viewport.setFramebufferSize(w.get(0), h.get(0));
             glViewport(0, 0, viewport.framebufferWidth(), viewport.framebufferHeight());
@@ -997,7 +1039,6 @@ public final class LogikaEngine {
         String sessionType = System.getenv("XDG_SESSION_TYPE");
         boolean linux = os.contains("linux");
         boolean wayland = "wayland".equalsIgnoreCase(sessionType) || System.getenv("WAYLAND_DISPLAY") != null;
-
         if (linux && wayland) {
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
             System.out.println("Linux Wayland session detected: forcing GLFW X11 platform.");
@@ -1007,58 +1048,66 @@ public final class LogikaEngine {
     private void cleanup() {
         audio.close();
         renderer.close();
-
         if (window != NULL) {
             glfwFreeCallbacks(window);
             glfwDestroyWindow(window);
             window = NULL;
         }
-
         glfwTerminate();
         GLFWErrorCallback callback = glfwSetErrorCallback(null);
-        if (callback != null) {
-            callback.free();
+        if (callback != null) callback.free();
+    }
+
+    private record ClipboardComponent(int sourceId, ComponentKind kind, Vec2 center, boolean sourceActive) { }
+    private record ClipboardWire(int fromComponentId, int fromIndex, int toComponentId, int toIndex) { }
+    private record EditorSnapshot(Circuit.Snapshot circuit, List<Integer> selectedIds, PinRef pendingWire, Tool tool, ChainVariant chainVariant) { }
+    private record UndoableEdit(String label, EditorSnapshot before, EditorSnapshot after) { }
+    private record PlacementCandidate(Vec2 center, String label, PlacementSide side, Rect slotBounds) { }
+
+    private enum PlacementSide {
+        LEFT("left side"), RIGHT("right side"), TOP("top side"), BOTTOM("bottom side");
+        private final String label;
+        PlacementSide(String label) { this.label = label; }
+        String label() { return label; }
+        Rect slotBounds(Rect target) {
+            double margin = PLACEMENT_SLOT_MARGIN_WORLD;
+            double thickness = PLACEMENT_SLOT_THICKNESS_WORLD;
+            return switch (this) {
+                case LEFT -> new Rect(target.x() - margin - thickness, target.y(), thickness, target.height());
+                case RIGHT -> new Rect(target.x() + target.width() + margin, target.y(), thickness, target.height());
+                case TOP -> new Rect(target.x(), target.y() - margin - thickness, target.width(), thickness);
+                case BOTTOM -> new Rect(target.x(), target.y() + target.height() + margin, target.width(), thickness);
+            };
+        }
+        Vec2 candidateCenter(ComponentKind kind, Rect target) {
+            double gap = PLACEMENT_SLOT_MARGIN_WORLD + PLACEMENT_SLOT_THICKNESS_WORLD + PLACEMENT_CANDIDATE_MARGIN_WORLD;
+            return switch (this) {
+                case LEFT -> new Vec2(target.x() - gap - kind.width() / 2.0, target.centerY());
+                case RIGHT -> new Vec2(target.x() + target.width() + gap + kind.width() / 2.0, target.centerY());
+                case TOP -> new Vec2(target.centerX(), target.y() - gap - kind.height() / 2.0);
+                case BOTTOM -> new Vec2(target.centerX(), target.y() + target.height() + gap + kind.height() / 2.0);
+            };
         }
     }
 
-    private record ClipboardComponent(int sourceId, ComponentKind kind, Vec2 center, boolean sourceActive) {
-    }
-
-    private record ClipboardWire(int fromComponentId, int fromIndex, int toComponentId, int toIndex) {
+    private enum PlacementAlignment {
+        GRID("grid"), FREE("free"), PIN_ROW("pin row"), EDGE_COLUMN("edge column");
+        private final String label;
+        PlacementAlignment(String label) { this.label = label; }
+        String label() { return label; }
     }
 
     private enum ChainVariant {
-        AUTO("Auto", "first free input"),
-        A("A", "force input A"),
-        B("B", "force input B"),
-        BOTH("A+B", "same source on A and B for a NAND inverter");
-
+        AUTO("Auto", "first free input"), A("A", "force input A"), B("B", "force input B"), BOTH("A+B", "same source on A and B for a NAND inverter");
         private final String label;
         private final String description;
-
-        ChainVariant(String label, String description) {
-            this.label = label;
-            this.description = description;
-        }
-
-        String label() {
-            return label;
-        }
-
-        String description() {
-            return description;
-        }
-
-        ChainVariant next() {
-            ChainVariant[] variants = values();
-            return variants[(ordinal() + 1) % variants.length];
-        }
-
+        ChainVariant(String label, String description) { this.label = label; this.description = description; }
+        String label() { return label; }
+        String description() { return description; }
+        ChainVariant next() { ChainVariant[] variants = values(); return variants[(ordinal() + 1) % variants.length]; }
         List<Integer> inputIndexesFor(CircuitComponent component, InputConnectionLookup lookup) {
             int count = component.kind().inputCount();
-            if (count <= 0) {
-                return List.of();
-            }
+            if (count <= 0) return List.of();
             return switch (this) {
                 case AUTO -> List.of(firstAvailableInput(component, lookup));
                 case A -> List.of(0);
@@ -1066,27 +1115,17 @@ public final class LogikaEngine {
                 case BOTH -> count >= 2 ? List.of(0, 1) : List.of(0);
             };
         }
-
         String inputLabel(List<Integer> inputIndexes) {
-            if (inputIndexes.size() > 1) {
-                return "inputs A+B";
-            }
+            if (inputIndexes.size() > 1) return "inputs A+B";
             int index = inputIndexes.isEmpty() ? 0 : inputIndexes.get(0);
             return "input " + (index == 0 ? "A" : "B");
         }
-
         private static int firstAvailableInput(CircuitComponent component, InputConnectionLookup lookup) {
-            for (int i = 0; i < component.kind().inputCount(); i++) {
-                if (!lookup.connected(component.id(), i)) {
-                    return i;
-                }
-            }
+            for (int i = 0; i < component.kind().inputCount(); i++) if (!lookup.connected(component.id(), i)) return i;
             return 0;
         }
     }
 
     @FunctionalInterface
-    private interface InputConnectionLookup {
-        boolean connected(int componentId, int inputIndex);
-    }
+    private interface InputConnectionLookup { boolean connected(int componentId, int inputIndex); }
 }

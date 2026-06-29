@@ -3,9 +3,11 @@ package dev.alexis.logika.graphics;
 import dev.alexis.logika.engine.Viewport;
 import dev.alexis.logika.model.Circuit;
 import dev.alexis.logika.model.PinRef;
+import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 
+import java.util.List;
 import java.util.Set;
 
 final class CircuitCanvasRenderer {
@@ -25,10 +27,12 @@ final class CircuitCanvasRenderer {
         return gridWireRenderer.hoveredPin(camera, viewport, circuit, mouseX, mouseY);
     }
 
-    void draw(Camera2D camera, Viewport viewport, Circuit circuit, Set<Integer> selectedIds, int hoveredId,
-              PinRef hoveredPin, PinRef pendingWire, Rect selectionMarquee, double mouseX, double mouseY) {
+    void draw(Camera2D camera, Viewport viewport, Circuit circuit, List<PlacementPreview> placementPreviews,
+              Set<Integer> selectedIds, int hoveredId, PinRef hoveredPin, PinRef pendingWire,
+              Rect selectionMarquee, double mouseX, double mouseY) {
         gridWireRenderer.draw(camera, viewport, circuit, pendingWire, mouseX, mouseY);
         drawSelectionMarquee(camera, viewport, selectionMarquee);
+        componentRenderer.drawPlacementPreviews(camera, viewport, placementPreviews);
         componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire);
     }
 

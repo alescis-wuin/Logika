@@ -7,10 +7,12 @@ import dev.alexis.logika.model.ComponentKind;
 import dev.alexis.logika.model.PinDirection;
 import dev.alexis.logika.model.PinEndpoint;
 import dev.alexis.logika.model.PinRef;
+import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_CENTER;
@@ -19,6 +21,9 @@ final class ComponentCanvasRenderer {
     private static final double MIN_TITLE_SIZE = 7.0;
     private static final double MIN_BADGE_SCALE = 0.42;
     private static final RenderTheme.Rgba SELECTION_COLOR = new RenderTheme.Rgba(87, 177, 255, 255);
+    private static final RenderTheme.Rgba HOLOGRAM_COLOR = new RenderTheme.Rgba(110, 220, 255, 210);
+    private static final RenderTheme.Rgba SLOT_FILL = new RenderTheme.Rgba(9, 15, 24, 238);
+    private static final RenderTheme.Rgba SLOT_HOVER_FILL = new RenderTheme.Rgba(24, 38, 58, 248);
     private static final RenderTheme.Rgba SIGNAL_ON = new RenderTheme.Rgba(20, 105, 72, 242);
     private static final RenderTheme.Rgba SIGNAL_OFF = new RenderTheme.Rgba(28, 37, 56, 236);
 
@@ -26,6 +31,57 @@ final class ComponentCanvasRenderer {
 
     ComponentCanvasRenderer(NvgCanvas canvas) {
         this.canvas = canvas;
+    }
+
+    void drawPlacementPreviews(Camera2D camera, Viewport viewport, List<PlacementPreview> previews) {
+        for (PlacementPreview preview : previews) {
+            if (preview.slot()) {
+                drawPlacementSlot(camera, viewport, preview);
+            }
+        }
+        for (PlacementPreview preview : previews) {
+            if (!preview.slot()) {
+                drawPlacementHologram(camera, viewport, preview);
+            }
+        }
+    }
+
+    private void drawPlacementSlot(Camera2D camera, Viewport viewport, PlacementPreview preview) {
+        Rect bounds = preview.bounds();
+        Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
+        double width = bounds.width() * camera.zoom();
+        double height = bounds.height() * camera.zoom();
+        canvas.fillRect(topLeft.x(), topLeft.y(), width, height, preview.hovered() ? SLOT_HOVER_FILL : SLOT_FILL);
+        float plusSize = (float) clamp(Math.min(width, height) * 0.72, 24.0, 48.0);
+        canvas.text("+", (float) (topLeft.x() + width / 2.0), (float) (topLeft.y() + height / 2.0),
+                plusSize, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
+    }
+
+    private void drawPlacementHologram(Camera2D camera, Viewport viewport, PlacementPreview preview) {
+        Rect bounds = preview.bounds();
+        Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
+        double width = bounds.width() * camera.zoom();
+        double height = bounds.height() * camera.zoom();
+        double radius = Math.min(clamp(UiMetrics.COMPONENT_RADIUS_SCREEN * Math.sqrt(camera.zoom()), 8.0, 32.0),
+                Math.min(width, height) * 0.28);
+
+        canvas.fillRound(topLeft.x(), topLeft.y(), width, height, radius, new RenderTheme.Rgba(55, 145, 220, 54));
+        canvas.strokeRound(topLeft.x(), topLeft.y(), width, height, radius, HOLOGRAM_COLOR, 2.6f);
+
+        if (width >= 130.0 && height >= 70.0) {
+            canvas.text("Place " + preview.kind().label(), (float) (topLeft.x() + width / 2.0),
+                    (float) (topLeft.y() + height * 0.43), 18.0f, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
+            canvas.text(preview.alignmentMode(), (float) (topLeft.x() + width / 2.0),
+                    (float) (topLeft.y() + height * 0.61), 13.5f, NVG_ALIGN_CENTER, RenderTheme.TEXT_MUTED, false);
+        }
+
+        CircuitComponent ghost = new CircuitComponent(-1, preview.kind(), bounds.x(), bounds.y());
+        for (PinEndpoint pin : ghost.pins()) {
+            Vec2 screen = camera.worldToScreen(pin.worldPosition(), viewport);
+            double radiusPin = clamp(UiMetrics.PIN_RADIUS_SCREEN * camera.zoom(), 3.0, 20.0);
+            canvas.circle(screen.x(), screen.y(), radiusPin + 4.0, new RenderTheme.Rgba(3, 6, 13, 180));
+            canvas.circle(screen.x(), screen.y(), radiusPin, HOLOGRAM_COLOR);
+        }
     }
 
     void draw(Camera2D camera, Viewport viewport, Circuit circuit, Set<Integer> selectedIds, int hoveredId,
@@ -54,7 +110,7 @@ final class ComponentCanvasRenderer {
 
             if (width >= 118.0 && height >= 82.0) {
                 for (PinEndpoint pin : component.pins()) {
-                    drawSignalBadge(camera, viewport, circuit, pin, topLeft, width, height, hovered);
+                    drawSignalBadge(camera, viewport, circuit, pin, topLeft, width, height);
                 }
             }
             if (selected) {
@@ -85,7 +141,7 @@ final class ComponentCanvasRenderer {
     }
 
     private void drawSignalBadge(Camera2D camera, Viewport viewport, Circuit circuit, PinEndpoint pin,
-                                 Vec2 topLeft, double componentWidth, double componentHeight, boolean componentHovered) {
+                                 Vec2 topLeft, double componentWidth, double componentHeight) {
         Vec2 pinScreen = camera.worldToScreen(pin.worldPosition(), viewport);
         boolean output = pin.ref().direction() == PinDirection.OUTPUT;
         boolean value = circuit.pinValue(pin.ref());
@@ -101,10 +157,6 @@ final class ComponentCanvasRenderer {
                 topLeft.x() + componentWidth - badgeW - UiMetrics.COMPONENT_PADDING_SCREEN * scale);
 
         double minY = topLeft.y() + UiMetrics.COMPONENT_PADDING_SCREEN * scale;
-        if (componentHovered && !output) {
-            minY = Math.max(minY, topLeft.y() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN
-                    + UiMetrics.TRASH_BUTTON_SIZE_SCREEN + UiMetrics.TRASH_CONTENT_GAP_SCREEN * scale);
-        }
         double maxY = topLeft.y() + componentHeight - badgeH - UiMetrics.COMPONENT_PADDING_SCREEN * scale;
         if (maxY < minY) {
             minY = maxY;

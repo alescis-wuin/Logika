@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class CircuitComponent {
+    private static final double SINGLE_PIN_Y_RATIO = 0.50;
+    private static final double NAND_INPUT_A_Y_RATIO = 0.34;
+    private static final double NAND_INPUT_B_Y_RATIO = 0.66;
+
     private final int id;
     private final ComponentKind kind;
     private double x;
@@ -53,17 +57,17 @@ public final class CircuitComponent {
 
         if (kind == ComponentKind.NAND) {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "A",
-                    new Vec2(b.x(), b.y() + b.height() * 0.38)));
+                    new Vec2(b.x(), b.y() + b.height() * NAND_INPUT_A_Y_RATIO)));
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 1), "B",
-                    new Vec2(b.x(), b.y() + b.height() * 0.70)));
+                    new Vec2(b.x(), b.y() + b.height() * NAND_INPUT_B_Y_RATIO)));
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.54)));
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * SINGLE_PIN_Y_RATIO)));
         } else if (kind == ComponentKind.LED) {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.INPUT, 0), "IN",
-                    new Vec2(b.x(), b.y() + b.height() * 0.58)));
+                    new Vec2(b.x(), b.y() + b.height() * SINGLE_PIN_Y_RATIO)));
         } else {
             pins.add(new PinEndpoint(new PinRef(id, PinDirection.OUTPUT, 0), "Y",
-                    new Vec2(b.x() + b.width(), b.y() + b.height() * 0.58)));
+                    new Vec2(b.x() + b.width(), b.y() + b.height() * SINGLE_PIN_Y_RATIO)));
         }
 
         return pins;

@@ -1,6 +1,6 @@
 # Logika
 
-Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.1 keeps the clear 2D editor loop from V1 and adds a more playful editing workflow: multi-selection, area selection, grouped drag-and-drop, block copy/paste, preserved internal wires, and component-body chaining for faster circuit construction.
+Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.2 keeps the clear 2D editor loop and adds dark adjacent placement slots, hover-only holograms, modifier-based alignment, and snapshot-backed undo/redo on top of the multi-selection and chaining workflow.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ On Linux Wayland sessions, Logika requests GLFW's X11 backend before `glfwInit()
 ```bash
 git clone https://github.com/alescis-wuin/Logika.git
 cd Logika
-git checkout ai/feat/editor-ux-chain-selection
+git checkout ai/fix/placement-preview-polish
 mvn clean package
 mvn exec:java
 ```
@@ -30,11 +30,19 @@ LOGIKA_FONT=/path/to/Inter-Regular.ttf LOGIKA_FONT_BOLD=/path/to/Inter-SemiBold.
 
 - Mouse wheel: zoom at cursor.
 - Right mouse drag, middle mouse drag, or Space + left drag: pan.
-- Bottom toolbar: choose `Button`, `Switch`, `NAND`, or `LED`, then click an empty grid cell.
+- Bottom toolbar: choose `Button`, `Switch`, `NAND`, or `LED`.
+- Placement on empty canvas: hover a free area, then click.
+- Placement next to a component: hover a component to show valid dark `+` slots. Hover a slot to preview the final hologram, then click the slot to place. The component body keeps its normal interactions.
+- Placement alignment:
+  - default: grid snap;
+  - `Alt`: free placement;
+  - `Ctrl`: pin-row alignment, aligning output and input pins on the horizontal axis;
+  - `Ctrl+Alt`: edge-column alignment with components above.
 - Selection: click a component to select it; Shift/Ctrl-click toggles it in the current selection.
 - Area selection: drag from an empty grid cell to select every component touched by the selection rectangle.
 - Group move: drag any selected component to move the whole selected block.
 - Copy/paste: `Ctrl+C` copies selected components, their source states, and internal wires; `Ctrl+V` pastes the block near the cursor; `Ctrl+D` duplicates.
+- Undo/redo: `Ctrl+Z` undoes editor changes; `Ctrl+Y` or `Ctrl+Shift+Z` redoes them.
 - Node linking: click one node, then click a compatible node. Output -> input and input -> output are both accepted.
 - Chaining: click an output node, then click a component body. The connection is made automatically and the target output remains selected for the next link.
 - Chain variant: press `V` to cycle between automatic input, input A, input B, and A+B for NAND-as-inverter wiring.
