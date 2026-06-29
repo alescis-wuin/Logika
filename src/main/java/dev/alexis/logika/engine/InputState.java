@@ -6,6 +6,9 @@ public final class InputState {
     private boolean leftDown;
     private boolean panDown;
     private boolean spaceDown;
+    private boolean controlDown;
+    private boolean altDown;
+    private boolean shiftDown;
     private boolean panning;
 
     public double mouseX() {
@@ -43,6 +46,30 @@ public final class InputState {
 
     public void setSpaceDown(boolean spaceDown) {
         this.spaceDown = spaceDown;
+    }
+
+    public boolean controlDown() {
+        return controlDown;
+    }
+
+    public void setControlDown(boolean controlDown) {
+        this.controlDown = controlDown;
+    }
+
+    public boolean altDown() {
+        return altDown;
+    }
+
+    public void setAltDown(boolean altDown) {
+        this.altDown = altDown;
+    }
+
+    public boolean shiftDown() {
+        return shiftDown;
+    }
+
+    public void setShiftDown(boolean shiftDown) {
+        this.shiftDown = shiftDown;
     }
 
     public boolean panning() {

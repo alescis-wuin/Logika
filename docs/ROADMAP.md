@@ -1,17 +1,16 @@
 # Roadmap
 
-## Version 1.1
-
-- Add save/load in JSON.
-- Add undo/redo for placement, deletion, movement, and wiring.
-- Add copy/paste and box selection.
-- Add explicit cycle diagnostics.
-- Add keyboard-only alternatives for placement, movement, deletion, and connection.
-
 ## Version 1.2
 
-- Add clocks, NOT, AND, OR, XOR, and richer IO components.
-- Add reusable subcircuits.
-- Add a property inspector.
-- Add STB-backed custom icon/font assets.
-- Add optional OpenAL sound themes.
+- Add placement holograms.
+- Add placement alignment modes: grid, free, pin row, and edge column.
+- Add snapshot-backed undo/redo for structural editor edits.
+
+## Next
+
+- Save/load JSON.
+- Reusable custom components.
+- Wire selection and rerouting.
+- Graph diagnostics.
+- Accessibility presets.
+- Command-based history if snapshot history becomes too heavy.

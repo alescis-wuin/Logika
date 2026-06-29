@@ -3,9 +3,12 @@ package dev.alexis.logika.model;
 import dev.alexis.logika.util.Vec2;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class Circuit {
     private final List<CircuitComponent> components = new ArrayList<>();
@@ -107,10 +110,45 @@ public final class Circuit {
         wires.removeIf(item -> item.touchesComponent(id));
     }
 
+    public void removeComponents(Collection<Integer> ids) {
+        Set<Integer> idSet = new HashSet<>(ids);
+        components.removeIf(component -> idSet.contains(component.id()));
+        wires.removeIf(item -> idSet.contains(item.from().componentId()) || idSet.contains(item.to().componentId()));
+    }
+
+    public Snapshot snapshot() {
+        List<ComponentSnapshot> componentSnapshots = new ArrayList<>(components.size());
+        for (CircuitComponent component : components) {
+            componentSnapshots.add(new ComponentSnapshot(component.id(), component.kind(),
+                    component.bounds().x(), component.bounds().y(), component.sourceActive()));
+        }
+        return new Snapshot(List.copyOf(componentSnapshots), List.copyOf(wires), nextComponentId);
+    }
+
+    public void restore(Snapshot snapshot) {
+        components.clear();
+        wires.clear();
+
+        for (ComponentSnapshot state : snapshot.components()) {
+            CircuitComponent component = new CircuitComponent(state.id(), state.kind(), state.x(), state.y());
+            component.setSourceActive(state.sourceActive());
+            components.add(component);
+        }
+
+        wires.addAll(snapshot.wires());
+        nextComponentId = snapshot.nextComponentId();
+    }
+
     public void clear() {
         components.clear();
         wires.clear();
         nextComponentId = 1;
+    }
+
+    public record Snapshot(List<ComponentSnapshot> components, List<Wire> wires, int nextComponentId) {
+    }
+
+    public record ComponentSnapshot(int id, ComponentKind kind, double x, double y, boolean sourceActive) {
     }
 
     public record ConnectResult(boolean success, String message) {

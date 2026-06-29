@@ -2,85 +2,31 @@
 
 ## Goals
 
-Logika 1.0 keeps the first version intentionally small while separating the main responsibilities:
+Logika keeps a compact Java/LWJGL editor architecture with separate responsibilities for window lifecycle, rendering, camera math, circuit data, simulation, UI state, and optional audio feedback.
 
-- GLFW window lifecycle and input callbacks;
-- OpenGL/NanoVG rendering;
-- mathematical camera/projection;
-- circuit data model;
-- simulation logic;
-- lightweight UI state;
-- optional OpenAL feedback.
+## Boundaries
 
-This keeps the editor easier to extend without creating a large framework.
-
-## Packages
-
-```text
-dev.alexis.logika
-├── audio        Optional OpenAL click feedback
-├── engine       Application loop, GLFW callbacks, viewport state, direct manipulation
-├── graphics     Camera, NanoVG facade, theme, circuit passes, and overlay passes
-├── model        Circuit graph, components, pins, wires
-├── simulation   Logic propagation
-├── ui           Bottom toolbar, editor tools, shared UI metrics
-└── util         Small value objects
-```
-
-## SOLID boundaries
-
-- `LogikaEngine` owns orchestration only: lifecycle, callbacks, direct manipulation, hover state, drag state, and state transitions.
-- `NanoVGRenderer` is a facade. It owns the NanoVG context and delegates drawing to focused render passes.
-- `NvgCanvas` centralizes NanoVG primitives, crisp text placement, and font fallback loading.
-- `RenderTheme` centralizes the high-contrast palette used by components, wires, nodes, and overlays.
-- `GridWireRenderer` draws the grid, axes, wires, and pending wire affordance.
-- `ComponentCanvasRenderer` draws cards, internal signal badges, pins, hover borders, and trash actions.
-- `EditorOverlayRenderer` draws toolbar and status/legend overlays.
+- `LogikaEngine` owns callbacks, drag state, selection state, clipboard state, placement alignment, undo/redo history, chaining state, and state transitions.
+- `Circuit` owns graph validation plus snapshot/restore support for editor history.
+- `NanoVGRenderer` owns the NanoVG context and delegates drawing to focused render passes.
+- `CircuitCanvasRenderer` draws grid/wire layers, placement previews, selection rectangles, and component layers.
+- `ComponentCanvasRenderer` draws cards, placement holograms, signal badges, pins, selected feedback, and component actions.
+- `EditorOverlayRenderer` draws toolbar, status, selected count, clipboard count, chain variant, and history counts.
 - `LogicSimulator` receives a `Circuit` and updates runtime values; it does not know GLFW or NanoVG.
-- `Circuit` validates graph mutations such as compatible pin connections.
-- `Camera2D` is purely mathematical and can be tested without LWJGL.
 
-## Projection model
+## Placement model
 
-The editor uses a 2D orthographic projection implemented by `Camera2D`:
+Placement uses a single candidate center derived from cursor world coordinates and the active modifier state:
 
-- world units are grid units;
-- screen coordinates are GLFW content-area coordinates;
-- framebuffer dimensions are used only for pixel-based OpenGL calls;
-- zoom-at-cursor preserves the world coordinate under the pointer.
+- default: grid snap;
+- `Alt`: free world placement;
+- `Ctrl`: pin-row alignment between output and input pins on the horizontal axis;
+- `Ctrl+Alt`: edge-column alignment against components above.
 
-## Readability model
+A placement hologram is emitted only when the resulting candidate rectangle does not collide with existing components.
 
-The renderer avoids scaling all text directly with world zoom. Card labels, overlay labels, signal badges, and axes labels use screen-space clamps so zooming out reduces the card footprint without making text proportionally blurrier or oversized.
+## Undo/redo model
 
-The current readable card layout uses:
+Undo/redo uses immutable editor snapshots. Each edit stores the before/after state for the circuit, selection, pending pin, tool, and chain variant. Redo history is cleared when a new edit is recorded.
 
-- larger component model sizes with a shared minimum width;
-- a high-contrast dark palette;
-- regular and bold NanoVG font faces loaded through `LOGIKA_FONT` and `LOGIKA_FONT_BOLD` fallbacks;
-- rounded component cards with stronger hover and selection borders;
-- larger pins and larger pin hit targets;
-- internal two-row signal badges: pin name on the first row, logical value on the second row;
-- a larger circular trash action with matching visual and intended click size.
-
-## Direct manipulation model
-
-The explicit `Select` and `Wire` toolbar actions were removed. Interaction is always available:
-
-1. click a node to start a pending connection;
-2. click a compatible node to complete the connection;
-3. hold and drag a component body to move it on the grid;
-4. hover a component to reveal the trash action;
-5. click sources directly to use them.
-
-## Simulation model
-
-Logika 1.0 is a combinational simulator with deterministic iteration:
-
-1. source components publish their current state;
-2. wires copy output values into target input pins;
-3. NAND components recompute output values;
-4. LED components mirror their input value for rendering;
-5. the loop repeats a bounded number of times to stabilize simple chains.
-
-Cycles are not yet diagnosed. Future versions should add graph validation, clocked components, and explicit oscillation reporting.
+Tracked edits include placement, movement, component removal, group removal, clear, wire connection, component chaining, paste, duplicate, and switch toggles.
