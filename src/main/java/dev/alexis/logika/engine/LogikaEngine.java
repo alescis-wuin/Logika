@@ -25,6 +25,7 @@ public final class LogikaEngine {
     private static final double DRAG_THRESHOLD_PX = 7.0;
     private static final double PIN_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
     private static final double EDGE_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
+    private static final double PLACEMENT_SLOT_HIT_RADIUS_SCREEN = 58.0;
 
     private final Viewport viewport = new Viewport(INITIAL_WIDTH, INITIAL_HEIGHT, INITIAL_WIDTH, INITIAL_HEIGHT);
     private final InputState input = new InputState();
@@ -357,7 +358,7 @@ public final class LogikaEngine {
         status = switch (nextTool) {
             case INTERACT -> "Interact directly: select, copy, drag, click nodes, or use sources.";
             case PLACE_BUTTON, PLACE_SWITCH, PLACE_NAND, PLACE_LED ->
-                    "Hover empty canvas to place, or click an external slot around a component.";
+                    "Hover empty canvas to place, or click an external + slot around a component.";
         };
         audio.playClick(true);
     }
@@ -376,11 +377,11 @@ public final class LogikaEngine {
         ComponentKind kind = tool.componentKind().orElseThrow();
         Vec2 center = placementCenter(kind, world);
         if (collidesWithExistingComponent(componentBounds(kind, center))) {
-            status = "Placement blocked: use a visible external slot or an empty grid area.";
+            status = "Placement blocked: use a visible external + slot or an empty grid area.";
             audio.playClick(false);
             return;
         }
-        placeComponent(kind, new PlacementCandidate(center, placementAlignment().label()));
+        placeComponent(kind, new PlacementCandidate(center, placementAlignment().label(), null));
     }
 
     private void placeComponent(ComponentKind kind, PlacementCandidate candidate) {
@@ -762,10 +763,32 @@ public final class LogikaEngine {
     private Optional<PlacementCandidate> placementSlotAt(ComponentKind kind, Vec2 world) {
         for (CircuitComponent component : circuit.components()) {
             for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
-                if (componentBounds(kind, candidate.center()).contains(world)) return Optional.of(candidate);
+                if (placementCandidateHit(kind, candidate, world)) return Optional.of(candidate);
             }
         }
         return Optional.empty();
+    }
+
+    private boolean placementCandidateHit(ComponentKind kind, PlacementCandidate candidate, Vec2 world) {
+        if (componentBounds(kind, candidate.center()).contains(world)) return true;
+        if (candidate.side() == null) return false;
+        return placementSlotHitBounds(kind, candidate).contains(world);
+    }
+
+    private Rect placementSlotHitBounds(ComponentKind kind, PlacementCandidate candidate) {
+        Vec2 center = placementSlotHotspotCenter(kind, candidate);
+        double radius = PLACEMENT_SLOT_HIT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
+        return new Rect(center.x() - radius, center.y() - radius, radius * 2.0, radius * 2.0);
+    }
+
+    private Vec2 placementSlotHotspotCenter(ComponentKind kind, PlacementCandidate candidate) {
+        Rect bounds = componentBounds(kind, candidate.center());
+        return switch (candidate.side()) {
+            case LEFT -> new Vec2(bounds.x() + bounds.width(), bounds.centerY());
+            case RIGHT -> new Vec2(bounds.x(), bounds.centerY());
+            case TOP -> new Vec2(bounds.centerX(), bounds.y() + bounds.height());
+            case BOTTOM -> new Vec2(bounds.centerX(), bounds.y());
+        };
     }
 
     private List<PlacementCandidate> adjacentPlacementCandidates(ComponentKind kind, CircuitComponent target) {
@@ -773,7 +796,7 @@ public final class LogikaEngine {
         Rect targetBounds = target.bounds();
         for (PlacementSide side : PlacementSide.values()) {
             Vec2 center = side.candidateCenter(kind, targetBounds);
-            if (!collidesWithExistingComponent(componentBounds(kind, center))) candidates.add(new PlacementCandidate(center, side.label()));
+            if (!collidesWithExistingComponent(componentBounds(kind, center))) candidates.add(new PlacementCandidate(center, side.label(), side));
         }
         return candidates;
     }
@@ -1037,7 +1060,7 @@ public final class LogikaEngine {
     private record ClipboardWire(int fromComponentId, int fromIndex, int toComponentId, int toIndex) { }
     private record EditorSnapshot(Circuit.Snapshot circuit, List<Integer> selectedIds, PinRef pendingWire, Tool tool, ChainVariant chainVariant) { }
     private record UndoableEdit(String label, EditorSnapshot before, EditorSnapshot after) { }
-    private record PlacementCandidate(Vec2 center, String label) { }
+    private record PlacementCandidate(Vec2 center, String label, PlacementSide side) { }
 
     private enum PlacementSide {
         LEFT("left side"), RIGHT("right side"), TOP("top side"), BOTTOM("bottom side");
