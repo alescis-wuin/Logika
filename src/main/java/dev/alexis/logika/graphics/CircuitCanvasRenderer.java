@@ -33,8 +33,7 @@ final class CircuitCanvasRenderer {
         gridWireRenderer.draw(camera, viewport, circuit, pendingWire, targetFeedback, timeSeconds, mouseX, mouseY);
         drawSelectionMarquee(camera, viewport, selectionMarquee);
         componentRenderer.drawPlacementPreviews(camera, viewport, placementPreviews);
-        componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire,
-                targetFeedback, timeSeconds);
+        componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire);
     }
 
     private void drawSelectionMarquee(Camera2D camera, Viewport viewport, Rect worldRect) {
