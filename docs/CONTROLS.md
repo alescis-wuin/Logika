@@ -28,6 +28,16 @@ Placement remains armed while interacting with component bodies, pins, switches,
 | Link nodes | Click one node, then click a compatible node; output-first and input-first are both accepted |
 | Delete component(s) | Hover trash icon, or press `Delete` for the current selection |
 
+## Visual feedback
+
+| Feedback | Behavior |
+|---|---|
+| Hover cursor | Changes over toolbar actions, components, placement slots, pins, and selected blocks |
+| Pending wire preview | Drawn from the selected pin to the pointer and visually snaps to the probable compatible target pin |
+| Target halo | Pulses around the nearest compatible pin or around a rejected hovered target |
+| Connection success | A short pulse travels along newly created wires |
+| Active wire breathing | Wires carrying `true` gently pulse in width and opacity |
+
 ## Simulation
 
 | Component | Behavior |
