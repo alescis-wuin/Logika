@@ -20,17 +20,22 @@ This keeps the editor easier to extend without creating a large framework.
 dev.alexis.logika
 ├── audio        Optional OpenAL click feedback
 ├── engine       Application loop, GLFW callbacks, viewport state, direct manipulation
-├── graphics     Camera and NanoVG rendering
+├── graphics     Camera, NanoVG facade, theme, circuit passes, and overlay passes
 ├── model        Circuit graph, components, pins, wires
 ├── simulation   Logic propagation
-├── ui           Bottom toolbar and editor tools
+├── ui           Bottom toolbar, editor tools, shared UI metrics
 └── util         Small value objects
 ```
 
 ## SOLID boundaries
 
 - `LogikaEngine` owns orchestration only: lifecycle, callbacks, direct manipulation, hover state, drag state, and state transitions.
-- `NanoVGRenderer` is read-only relative to the circuit model and only draws.
+- `NanoVGRenderer` is a facade. It owns the NanoVG context and delegates drawing to focused render passes.
+- `NvgCanvas` centralizes NanoVG primitives, crisp text placement, and font fallback loading.
+- `RenderTheme` centralizes the high-contrast palette used by components, wires, nodes, and overlays.
+- `GridWireRenderer` draws the grid, axes, wires, and pending wire affordance.
+- `ComponentCanvasRenderer` draws cards, internal signal badges, pins, hover borders, and trash actions.
+- `EditorOverlayRenderer` draws toolbar and status/legend overlays.
 - `LogicSimulator` receives a `Circuit` and updates runtime values; it does not know GLFW or NanoVG.
 - `Circuit` validates graph mutations such as compatible pin connections.
 - `Camera2D` is purely mathematical and can be tested without LWJGL.
@@ -43,6 +48,20 @@ The editor uses a 2D orthographic projection implemented by `Camera2D`:
 - screen coordinates are GLFW content-area coordinates;
 - framebuffer dimensions are used only for pixel-based OpenGL calls;
 - zoom-at-cursor preserves the world coordinate under the pointer.
+
+## Readability model
+
+The renderer avoids scaling all text directly with world zoom. Card labels, overlay labels, signal badges, and axes labels use screen-space clamps so zooming out reduces the card footprint without making text proportionally blurrier or oversized.
+
+The current readable card layout uses:
+
+- larger component model sizes with a shared minimum width;
+- a high-contrast dark palette;
+- regular and bold NanoVG font faces loaded through `LOGIKA_FONT` and `LOGIKA_FONT_BOLD` fallbacks;
+- rounded component cards with stronger hover and selection borders;
+- larger pins and larger pin hit targets;
+- internal two-row signal badges: pin name on the first row, logical value on the second row;
+- a larger circular trash action with matching visual and intended click size.
 
 ## Direct manipulation model
 

@@ -11,6 +11,7 @@ import dev.alexis.logika.model.PinRef;
 import dev.alexis.logika.simulation.LogicSimulator;
 import dev.alexis.logika.ui.Tool;
 import dev.alexis.logika.ui.Toolbar;
+import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -83,8 +84,6 @@ public final class LogikaEngine {
     private static final int INITIAL_WIDTH = 1280;
     private static final int INITIAL_HEIGHT = 820;
     private static final double DRAG_THRESHOLD_PX = 7.0;
-    private static final double TRASH_ICON_SIZE = 34.0;
-    private static final double TRASH_ICON_MARGIN = 8.0;
 
     private final Viewport viewport = new Viewport(INITIAL_WIDTH, INITIAL_HEIGHT, INITIAL_WIDTH, INITIAL_HEIGHT);
     private final InputState input = new InputState();
@@ -249,13 +248,7 @@ public final class LogikaEngine {
 
         Optional<CircuitComponent> trashTarget = findTrashTarget(input.mouseX(), input.mouseY());
         if (trashTarget.isPresent()) {
-            int id = trashTarget.get().id();
-            circuit.removeComponent(id);
-            selectedComponentId = -1;
-            hoveredComponentId = -1;
-            pendingWire = null;
-            status = "Component deleted from hover trash icon.";
-            audio.playClick(false);
+            deleteFromTrash(trashTarget.get());
             return;
         }
 
@@ -411,6 +404,12 @@ public final class LogikaEngine {
     private void placeComponent(Vec2 world) {
         ComponentKind kind = tool.componentKind().orElseThrow();
         Vec2 snapped = snap(world);
+        Rect candidate = componentBounds(kind, snapped);
+        if (collidesWithExistingComponent(candidate)) {
+            status = "Placement blocked: another component already occupies this area.";
+            audio.playClick(false);
+            return;
+        }
         CircuitComponent component = circuit.addComponent(kind, snapped);
         selectedComponentId = component.id();
         hoveredComponentId = component.id();
@@ -500,6 +499,22 @@ public final class LogikaEngine {
         hoveredComponentId = circuit.findComponent(world).map(CircuitComponent::id).orElse(-1);
     }
 
+    private void deleteFromTrash(CircuitComponent target) {
+        int id = target.id();
+        if (pressedButtonId == id) {
+            target.setSourceActive(false);
+            pressedButtonId = -1;
+        }
+        dragCandidateId = -1;
+        draggingComponent = false;
+        circuit.removeComponent(id);
+        selectedComponentId = -1;
+        hoveredComponentId = -1;
+        pendingWire = null;
+        status = "Component deleted from hover trash icon.";
+        audio.playClick(false);
+    }
+
     private Optional<CircuitComponent> findTrashTarget(double mouseX, double mouseY) {
         List<CircuitComponent> components = circuit.components();
         for (int i = components.size() - 1; i >= 0; i--) {
@@ -515,7 +530,10 @@ public final class LogikaEngine {
     private Rect trashIconRect(CircuitComponent component) {
         Rect bounds = component.bounds();
         Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
-        return new Rect(topLeft.x() + TRASH_ICON_MARGIN, topLeft.y() + TRASH_ICON_MARGIN, TRASH_ICON_SIZE, TRASH_ICON_SIZE);
+        return new Rect(topLeft.x() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN,
+                topLeft.y() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN,
+                UiMetrics.TRASH_BUTTON_SIZE_SCREEN,
+                UiMetrics.TRASH_BUTTON_SIZE_SCREEN);
     }
 
     private Vec2 snap(Vec2 world) {
@@ -524,7 +542,33 @@ public final class LogikaEngine {
     }
 
     private double pinHitRadiusWorld() {
-        return Math.max(14.0, 24.0 / camera.zoom());
+        return UiMetrics.PIN_HIT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
+    }
+
+    private Rect componentBounds(ComponentKind kind, Vec2 center) {
+        return new Rect(center.x() - kind.width() / 2.0, center.y() - kind.height() / 2.0,
+                kind.width(), kind.height());
+    }
+
+    private boolean collidesWithExistingComponent(Rect candidate) {
+        for (CircuitComponent component : circuit.components()) {
+            Rect padded = expand(component.bounds(), UiMetrics.COMPONENT_COLLISION_GAP_WORLD);
+            if (overlaps(candidate, padded)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Rect expand(Rect rect, double amount) {
+        return new Rect(rect.x() - amount, rect.y() - amount, rect.width() + amount * 2.0, rect.height() + amount * 2.0);
+    }
+
+    private static boolean overlaps(Rect a, Rect b) {
+        return a.x() < b.x() + b.width()
+                && a.x() + a.width() > b.x()
+                && a.y() < b.y() + b.height()
+                && a.y() + a.height() > b.y();
     }
 
     private void refreshViewport() {
