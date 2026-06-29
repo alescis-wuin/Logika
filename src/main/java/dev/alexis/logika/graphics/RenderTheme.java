@@ -29,5 +29,9 @@ final class RenderTheme {
         float bf() {
             return b / 255.0f;
         }
+
+        Rgba withAlpha(int alpha) {
+            return new Rgba(r, g, b, Math.max(0, Math.min(255, alpha)));
+        }
     }
 }
