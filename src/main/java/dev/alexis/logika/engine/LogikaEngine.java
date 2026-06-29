@@ -133,12 +133,14 @@ public final class LogikaEngine {
     private int hoveredComponentId = -1;
     private int pressedButtonId = -1;
     private int dragCandidateId = -1;
+    private int chainClickCandidateId = -1;
     private boolean draggingComponent;
     private boolean componentPressSelectionOnly;
     private Vec2 dragOffsetFromCenter = new Vec2(0.0, 0.0);
     private double pressScreenX;
     private double pressScreenY;
     private EditorSnapshot dragStartSnapshot;
+    private EditorSnapshot chainStartSnapshot;
     private boolean marqueeCandidate;
     private boolean marqueeSelecting;
     private boolean marqueeAdditive;
@@ -305,13 +307,18 @@ public final class LogikaEngine {
             return;
         }
 
+        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
+
+        if (tool.isPlacement()) {
+            placeComponent(world);
+            return;
+        }
+
         Optional<CircuitComponent> trashTarget = findTrashTarget(input.mouseX(), input.mouseY());
         if (trashTarget.isPresent()) {
             deleteFromTrash(trashTarget.get());
             return;
         }
-
-        Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
 
         Optional<PinEndpoint> pin = circuit.findPin(world, pinHitRadiusWorld());
         if (pin.isPresent()) {
@@ -321,15 +328,7 @@ public final class LogikaEngine {
 
         Optional<CircuitComponent> component = circuit.findComponent(world);
         if (component.isPresent()) {
-            if (pendingWire != null && tryChainToComponent(component.get())) {
-                return;
-            }
-            beginComponentPress(component.get(), world, hasSelectionModifier(mods));
-            return;
-        }
-
-        if (tool.isPlacement()) {
-            placeComponent(world);
+            beginComponentPress(component.get(), world, hasSelectionModifier(mods), pendingWire != null && !hasSelectionModifier(mods));
             return;
         }
 
@@ -347,6 +346,8 @@ public final class LogikaEngine {
                         ? selectedComponentIds.size() + " components moved."
                         : "Component moved.";
                 audio.playClick(true);
+            } else if (chainClickCandidateId != -1) {
+                component.ifPresent(this::tryChainToComponent);
             } else if (!componentPressSelectionOnly) {
                 component.ifPresent(this::performComponentClick);
             } else {
@@ -366,9 +367,11 @@ public final class LogikaEngine {
         }
 
         dragCandidateId = -1;
+        chainClickCandidateId = -1;
         draggingComponent = false;
         componentPressSelectionOnly = false;
         dragStartSnapshot = null;
+        chainStartSnapshot = null;
         groupDragStartCenters.clear();
         marqueeCandidate = false;
         marqueeSelecting = false;
@@ -378,7 +381,26 @@ public final class LogikaEngine {
         updateHoverState();
     }
 
-    private void beginComponentPress(CircuitComponent component, Vec2 world, boolean selectionModifier) {
+    private void beginComponentPress(CircuitComponent component, Vec2 world, boolean selectionModifier, boolean chainCandidate) {
+        chainClickCandidateId = -1;
+        chainStartSnapshot = null;
+
+        if (chainCandidate) {
+            chainStartSnapshot = snapshotEditor();
+            selectOnly(component.id());
+            chainClickCandidateId = component.id();
+            dragCandidateId = component.id();
+            draggingComponent = false;
+            pressScreenX = input.mouseX();
+            pressScreenY = input.mouseY();
+            dragOffsetFromCenter = world.subtract(component.center());
+            rememberGroupDragStartCenters();
+            dragStartSnapshot = snapshotEditor();
+            status = "Release to chain to this component, or drag to move it.";
+            audio.playClick(true);
+            return;
+        }
+
         if (selectionModifier) {
             boolean selected = toggleComponentSelection(component.id());
             componentPressSelectionOnly = true;
@@ -502,30 +524,30 @@ public final class LogikaEngine {
         pendingWire = null;
         status = switch (nextTool) {
             case INTERACT -> "Interact directly: select, copy, drag, click nodes, or use sources.";
-            case PLACE_BUTTON -> "Hover a free place for the placement hologram, then click to place a button.";
-            case PLACE_SWITCH -> "Hover a free place for the placement hologram, then click to place a switch.";
-            case PLACE_NAND -> "Hover a free place for the placement hologram, then click to place a NAND gate.";
-            case PLACE_LED -> "Hover a free place for the placement hologram, then click to place a LED indicator.";
+            case PLACE_BUTTON -> "Hover the canvas for a placement hologram, then click to place a button.";
+            case PLACE_SWITCH -> "Hover the canvas for a placement hologram, then click to place a switch.";
+            case PLACE_NAND -> "Hover the canvas for a placement hologram, then click to place a NAND gate.";
+            case PLACE_LED -> "Hover the canvas for a placement hologram, then click to place a LED indicator.";
         };
         audio.playClick(true);
     }
 
     private void placeComponent(Vec2 world) {
+        pendingWire = null;
         ComponentKind kind = tool.componentKind().orElseThrow();
-        Vec2 center = placementCenter(kind, world);
-        Rect candidate = componentBounds(kind, center);
-        if (collidesWithExistingComponent(candidate)) {
-            status = "Placement blocked: another component already occupies this area.";
+        Optional<PlacementCandidate> candidate = placementCandidate(kind, world);
+        if (candidate.isEmpty()) {
+            status = "Placement blocked: no free adjacent or hovered position available.";
             audio.playClick(false);
             return;
         }
 
         EditorSnapshot before = snapshotEditor();
-        CircuitComponent component = circuit.addComponent(kind, center);
+        CircuitComponent component = circuit.addComponent(kind, candidate.get().center());
         selectOnly(component.id());
         hoveredComponentId = component.id();
         recordEdit("Place " + kind.label(), before);
-        status = kind.label() + " placed with " + placementAlignment().label() + " alignment.";
+        status = kind.label() + " placed with " + candidate.get().label() + " alignment.";
         audio.playClick(true);
     }
 
@@ -580,7 +602,7 @@ public final class LogikaEngine {
                 audio.playClick(false);
                 return true;
             }
-            EditorSnapshot before = snapshotEditor();
+            EditorSnapshot before = chainStartSnapshot != null ? chainStartSnapshot : snapshotEditor();
             List<Integer> inputIndexes = chainVariant.inputIndexesFor(component, this::inputConnected);
             int success = 0;
             String lastMessage = "No compatible input.";
@@ -612,7 +634,7 @@ public final class LogikaEngine {
                 audio.playClick(false);
                 return true;
             }
-            EditorSnapshot before = snapshotEditor();
+            EditorSnapshot before = chainStartSnapshot != null ? chainStartSnapshot : snapshotEditor();
             PinRef outputRef = new PinRef(component.id(), PinDirection.OUTPUT, 0);
             Circuit.ConnectResult result = circuit.connect(outputRef, pendingWire);
             finishConnection(result, pendingWire, before, "Chain component");
@@ -949,13 +971,42 @@ public final class LogikaEngine {
 
         ComponentKind kind = tool.componentKind().orElseThrow();
         Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
-        Vec2 center = placementCenter(kind, world);
+        return placementCandidate(kind, world)
+                .map(candidate -> new PlacementPreview(kind, componentBounds(kind, candidate.center()), candidate.label()))
+                .orElse(null);
+    }
+
+    private Optional<PlacementCandidate> placementCandidate(ComponentKind kind, Vec2 rawWorld) {
+        Vec2 center = placementCenter(kind, rawWorld);
         Rect bounds = componentBounds(kind, center);
-        if (collidesWithExistingComponent(bounds)) {
-            return null;
+        if (!collidesWithExistingComponent(bounds)) {
+            return Optional.of(new PlacementCandidate(center, placementAlignment().label()));
         }
 
-        return new PlacementPreview(kind, bounds, placementAlignment().label());
+        Optional<CircuitComponent> hovered = circuit.findComponent(rawWorld);
+        if (hovered.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return adjacentPlacementCandidate(kind, hovered.get(), rawWorld);
+    }
+
+    private Optional<PlacementCandidate> adjacentPlacementCandidate(ComponentKind kind, CircuitComponent target, Vec2 rawWorld) {
+        Rect targetBounds = target.bounds();
+        List<PlacementSideScore> sides = new ArrayList<>(4);
+        sides.add(new PlacementSideScore(PlacementSide.LEFT, Math.abs(rawWorld.x() - targetBounds.x())));
+        sides.add(new PlacementSideScore(PlacementSide.RIGHT, Math.abs(rawWorld.x() - (targetBounds.x() + targetBounds.width()))));
+        sides.add(new PlacementSideScore(PlacementSide.TOP, Math.abs(rawWorld.y() - targetBounds.y())));
+        sides.add(new PlacementSideScore(PlacementSide.BOTTOM, Math.abs(rawWorld.y() - (targetBounds.y() + targetBounds.height()))));
+        sides.sort((a, b) -> Double.compare(a.distance(), b.distance()));
+
+        for (PlacementSideScore score : sides) {
+            Vec2 center = score.side().candidateCenter(kind, targetBounds);
+            if (!collidesWithExistingComponent(componentBounds(kind, center))) {
+                return Optional.of(new PlacementCandidate(center, score.side().label()));
+            }
+        }
+        return Optional.empty();
     }
 
     private Vec2 placementCenter(ComponentKind kind, Vec2 rawWorld) {
@@ -1101,9 +1152,11 @@ public final class LogikaEngine {
         chainVariant = snapshot.chainVariant();
         pressedButtonId = -1;
         dragCandidateId = -1;
+        chainClickCandidateId = -1;
         draggingComponent = false;
         componentPressSelectionOnly = false;
         dragStartSnapshot = null;
+        chainStartSnapshot = null;
         groupDragStartCenters.clear();
         updateHoverState();
     }
@@ -1288,6 +1341,39 @@ public final class LogikaEngine {
     }
 
     private record UndoableEdit(String label, EditorSnapshot before, EditorSnapshot after) {
+    }
+
+    private record PlacementCandidate(Vec2 center, String label) {
+    }
+
+    private record PlacementSideScore(PlacementSide side, double distance) {
+    }
+
+    private enum PlacementSide {
+        LEFT("left side"),
+        RIGHT("right side"),
+        TOP("top side"),
+        BOTTOM("bottom side");
+
+        private final String label;
+
+        PlacementSide(String label) {
+            this.label = label;
+        }
+
+        String label() {
+            return label;
+        }
+
+        Vec2 candidateCenter(ComponentKind kind, Rect target) {
+            double gap = UiMetrics.COMPONENT_COLLISION_GAP_WORLD;
+            return switch (this) {
+                case LEFT -> new Vec2(target.x() - gap - kind.width() / 2.0, target.centerY());
+                case RIGHT -> new Vec2(target.x() + target.width() + gap + kind.width() / 2.0, target.centerY());
+                case TOP -> new Vec2(target.centerX(), target.y() - gap - kind.height() / 2.0);
+                case BOTTOM -> new Vec2(target.centerX(), target.y() + target.height() + gap + kind.height() / 2.0);
+            };
+        }
     }
 
     private enum PlacementAlignment {

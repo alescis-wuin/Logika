@@ -87,7 +87,7 @@ final class ComponentCanvasRenderer {
 
             if (width >= 118.0 && height >= 82.0) {
                 for (PinEndpoint pin : component.pins()) {
-                    drawSignalBadge(camera, viewport, circuit, pin, topLeft, width, height, hovered);
+                    drawSignalBadge(camera, viewport, circuit, pin, topLeft, width, height);
                 }
             }
             if (selected) {
@@ -118,7 +118,7 @@ final class ComponentCanvasRenderer {
     }
 
     private void drawSignalBadge(Camera2D camera, Viewport viewport, Circuit circuit, PinEndpoint pin,
-                                 Vec2 topLeft, double componentWidth, double componentHeight, boolean componentHovered) {
+                                 Vec2 topLeft, double componentWidth, double componentHeight) {
         Vec2 pinScreen = camera.worldToScreen(pin.worldPosition(), viewport);
         boolean output = pin.ref().direction() == PinDirection.OUTPUT;
         boolean value = circuit.pinValue(pin.ref());
@@ -134,10 +134,6 @@ final class ComponentCanvasRenderer {
                 topLeft.x() + componentWidth - badgeW - UiMetrics.COMPONENT_PADDING_SCREEN * scale);
 
         double minY = topLeft.y() + UiMetrics.COMPONENT_PADDING_SCREEN * scale;
-        if (componentHovered && !output) {
-            minY = Math.max(minY, topLeft.y() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN
-                    + UiMetrics.TRASH_BUTTON_SIZE_SCREEN + UiMetrics.TRASH_CONTENT_GAP_SCREEN * scale);
-        }
         double maxY = topLeft.y() + componentHeight - badgeH - UiMetrics.COMPONENT_PADDING_SCREEN * scale;
         if (maxY < minY) {
             minY = maxY;

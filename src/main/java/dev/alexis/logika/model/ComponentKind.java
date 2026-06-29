@@ -7,17 +7,18 @@ public enum ComponentKind {
     LED("LED", "Input indicator", 214.0, 184.0);
 
     private static final double MIN_WIDTH = 280.0;
+    private static final double MIN_HEIGHT = 220.0;
 
     private final String label;
     private final String description;
     private final double naturalWidth;
-    private final double height;
+    private final double naturalHeight;
 
-    ComponentKind(String label, String description, double naturalWidth, double height) {
+    ComponentKind(String label, String description, double naturalWidth, double naturalHeight) {
         this.label = label;
         this.description = description;
         this.naturalWidth = naturalWidth;
-        this.height = height;
+        this.naturalHeight = naturalHeight;
     }
 
     public String label() {
@@ -33,7 +34,7 @@ public enum ComponentKind {
     }
 
     public double height() {
-        return height;
+        return Math.max(naturalHeight, MIN_HEIGHT);
     }
 
     public boolean isSource() {
