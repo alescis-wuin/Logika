@@ -89,13 +89,13 @@ final class NvgCanvas {
 
     void trashGlyph(double x, double y, RenderTheme.Rgba color) {
         double cx = x + 26.0;
-        double top = y + 18.0;
+        double top = y + 14.0;
         nvgBeginPath(vg);
         nvgMoveTo(vg, (float) (cx - 12.0), (float) top);
         nvgLineTo(vg, (float) (cx + 12.0), (float) top);
         nvgMoveTo(vg, (float) (cx - 6.5), (float) (top - 5.0));
         nvgLineTo(vg, (float) (cx + 6.5), (float) (top - 5.0));
-        nvgRect(vg, (float) (cx - 9.0), (float) (top + 6.0), 18.0f, 19.0f);
+        nvgRect(vg, (float) (cx - 9.0), (float) (top + 7.0), 18.0f, 18.0f);
         stroke(color, 2.5f);
     }
 

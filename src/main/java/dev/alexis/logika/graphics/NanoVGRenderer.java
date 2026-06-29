@@ -9,6 +9,7 @@ import dev.alexis.logika.ui.Toolbar;
 import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Rect;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.lwjgl.nanovg.NanoVG.nvgBeginFrame;
@@ -42,7 +43,7 @@ public final class NanoVGRenderer implements AutoCloseable {
     }
 
     public void render(Viewport viewport, Camera2D camera, Circuit circuit, Toolbar toolbar, Tool tool,
-                       PlacementPreview placementPreview, PinRef pendingWire, Set<Integer> selectedComponentIds,
+                       List<PlacementPreview> placementPreviews, PinRef pendingWire, Set<Integer> selectedComponentIds,
                        int hoveredComponentId, boolean draggingComponent, Rect selectionMarquee,
                        boolean simulationRunning, String status, double mouseX, double mouseY, int clipboardCount,
                        String chainVariantLabel, int undoCount, int redoCount) {
@@ -54,7 +55,7 @@ public final class NanoVGRenderer implements AutoCloseable {
 
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
         canvas.fillRect(0, 0, viewport.windowWidth(), viewport.windowHeight(), RenderTheme.BACKGROUND);
-        circuitRenderer.draw(camera, viewport, circuit, placementPreview, selectedComponentIds, hoveredComponentId,
+        circuitRenderer.draw(camera, viewport, circuit, placementPreviews, selectedComponentIds, hoveredComponentId,
                 hoveredPin, pendingWire, selectionMarquee, mouseX, mouseY);
         overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, simulationRunning, status,
                 selectedComponentIds.size(), clipboardCount, chainVariantLabel, undoCount, redoCount);
