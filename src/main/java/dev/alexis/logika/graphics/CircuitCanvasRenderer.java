@@ -29,11 +29,12 @@ final class CircuitCanvasRenderer {
 
     void draw(Camera2D camera, Viewport viewport, Circuit circuit, List<PlacementPreview> placementPreviews,
               Set<Integer> selectedIds, int hoveredId, PinRef hoveredPin, PinRef pendingWire,
-              Rect selectionMarquee, double mouseX, double mouseY) {
-        gridWireRenderer.draw(camera, viewport, circuit, pendingWire, mouseX, mouseY);
+              WireTargetFeedback targetFeedback, Rect selectionMarquee, double timeSeconds, double mouseX, double mouseY) {
+        gridWireRenderer.draw(camera, viewport, circuit, pendingWire, targetFeedback, timeSeconds, mouseX, mouseY);
         drawSelectionMarquee(camera, viewport, selectionMarquee);
         componentRenderer.drawPlacementPreviews(camera, viewport, placementPreviews);
-        componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire);
+        componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire,
+                targetFeedback, timeSeconds);
     }
 
     private void drawSelectionMarquee(Camera2D camera, Viewport viewport, Rect worldRect) {
