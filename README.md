@@ -1,6 +1,6 @@
 # Logika
 
-Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.2 keeps the clear 2D editor loop and adds placement holograms, explicit adjacent placement slots, modifier-based alignment, and snapshot-backed undo/redo on top of the multi-selection and chaining workflow.
+Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.2 keeps the clear 2D editor loop and adds dark adjacent placement slots, hover-only holograms, modifier-based alignment, and snapshot-backed undo/redo on top of the multi-selection and chaining workflow.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ LOGIKA_FONT=/path/to/Inter-Regular.ttf LOGIKA_FONT_BOLD=/path/to/Inter-SemiBold.
 - Right mouse drag, middle mouse drag, or Space + left drag: pan.
 - Bottom toolbar: choose `Button`, `Switch`, `NAND`, or `LED`.
 - Placement on empty canvas: hover a free area, then click.
-- Placement next to a component: hover a component, then click a visible external `+` slot or its hologram. The component body keeps its normal interactions.
+- Placement next to a component: hover a component to show valid dark `+` slots. Hover a slot to preview the final hologram, then click the slot to place. The component body keeps its normal interactions.
 - Placement alignment:
   - default: grid snap;
   - `Alt`: free placement;

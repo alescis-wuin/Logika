@@ -22,7 +22,8 @@ final class ComponentCanvasRenderer {
     private static final double MIN_BADGE_SCALE = 0.42;
     private static final RenderTheme.Rgba SELECTION_COLOR = new RenderTheme.Rgba(87, 177, 255, 255);
     private static final RenderTheme.Rgba HOLOGRAM_COLOR = new RenderTheme.Rgba(110, 220, 255, 210);
-    private static final RenderTheme.Rgba SLOT_BUTTON = new RenderTheme.Rgba(24, 58, 86, 250);
+    private static final RenderTheme.Rgba SLOT_FILL = new RenderTheme.Rgba(9, 15, 24, 238);
+    private static final RenderTheme.Rgba SLOT_HOVER_FILL = new RenderTheme.Rgba(24, 38, 58, 248);
     private static final RenderTheme.Rgba SIGNAL_ON = new RenderTheme.Rgba(20, 105, 72, 242);
     private static final RenderTheme.Rgba SIGNAL_OFF = new RenderTheme.Rgba(28, 37, 56, 236);
 
@@ -34,11 +35,29 @@ final class ComponentCanvasRenderer {
 
     void drawPlacementPreviews(Camera2D camera, Viewport viewport, List<PlacementPreview> previews) {
         for (PlacementPreview preview : previews) {
-            drawPlacementPreview(camera, viewport, preview);
+            if (preview.slot()) {
+                drawPlacementSlot(camera, viewport, preview);
+            }
+        }
+        for (PlacementPreview preview : previews) {
+            if (!preview.slot()) {
+                drawPlacementHologram(camera, viewport, preview);
+            }
         }
     }
 
-    private void drawPlacementPreview(Camera2D camera, Viewport viewport, PlacementPreview preview) {
+    private void drawPlacementSlot(Camera2D camera, Viewport viewport, PlacementPreview preview) {
+        Rect bounds = preview.bounds();
+        Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
+        double width = bounds.width() * camera.zoom();
+        double height = bounds.height() * camera.zoom();
+        canvas.fillRect(topLeft.x(), topLeft.y(), width, height, preview.hovered() ? SLOT_HOVER_FILL : SLOT_FILL);
+        float plusSize = (float) clamp(Math.min(width, height) * 0.72, 24.0, 48.0);
+        canvas.text("+", (float) (topLeft.x() + width / 2.0), (float) (topLeft.y() + height / 2.0),
+                plusSize, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
+    }
+
+    private void drawPlacementHologram(Camera2D camera, Viewport viewport, PlacementPreview preview) {
         Rect bounds = preview.bounds();
         Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
         double width = bounds.width() * camera.zoom();
@@ -48,7 +67,6 @@ final class ComponentCanvasRenderer {
 
         canvas.fillRound(topLeft.x(), topLeft.y(), width, height, radius, new RenderTheme.Rgba(55, 145, 220, 54));
         canvas.strokeRound(topLeft.x(), topLeft.y(), width, height, radius, HOLOGRAM_COLOR, 2.6f);
-        drawSlotButton(camera, viewport, preview);
 
         if (width >= 130.0 && height >= 70.0) {
             canvas.text("Place " + preview.kind().label(), (float) (topLeft.x() + width / 2.0),
@@ -64,30 +82,6 @@ final class ComponentCanvasRenderer {
             canvas.circle(screen.x(), screen.y(), radiusPin + 4.0, new RenderTheme.Rgba(3, 6, 13, 180));
             canvas.circle(screen.x(), screen.y(), radiusPin, HOLOGRAM_COLOR);
         }
-    }
-
-    private void drawSlotButton(Camera2D camera, Viewport viewport, PlacementPreview preview) {
-        Vec2 world = slotButtonWorldPosition(preview);
-        if (world == null) {
-            return;
-        }
-        Vec2 screen = camera.worldToScreen(world, viewport);
-        double outerRadius = 28.0;
-        double innerRadius = 20.0;
-        canvas.circle(screen.x(), screen.y(), outerRadius, new RenderTheme.Rgba(2, 8, 18, 230));
-        canvas.circle(screen.x(), screen.y(), innerRadius, SLOT_BUTTON);
-        canvas.text("+", (float) screen.x(), (float) screen.y(), 30.0f, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
-    }
-
-    private Vec2 slotButtonWorldPosition(PlacementPreview preview) {
-        Rect bounds = preview.bounds();
-        return switch (preview.alignmentMode()) {
-            case "left side" -> new Vec2(bounds.x() + bounds.width(), bounds.centerY());
-            case "right side" -> new Vec2(bounds.x(), bounds.centerY());
-            case "top side" -> new Vec2(bounds.centerX(), bounds.y() + bounds.height());
-            case "bottom side" -> new Vec2(bounds.centerX(), bounds.y());
-            default -> null;
-        };
     }
 
     void draw(Camera2D camera, Viewport viewport, Circuit circuit, Set<Integer> selectedIds, int hoveredId,

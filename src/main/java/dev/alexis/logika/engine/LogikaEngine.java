@@ -25,7 +25,9 @@ public final class LogikaEngine {
     private static final double DRAG_THRESHOLD_PX = 7.0;
     private static final double PIN_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
     private static final double EDGE_ALIGNMENT_MAX_DELTA_WORLD = 128.0;
-    private static final double PLACEMENT_SLOT_HIT_RADIUS_SCREEN = 58.0;
+    private static final double PLACEMENT_SLOT_THICKNESS_WORLD = 56.0;
+    private static final double PLACEMENT_SLOT_MARGIN_WORLD = 6.0;
+    private static final double PLACEMENT_CANDIDATE_MARGIN_WORLD = 18.0;
 
     private final Viewport viewport = new Viewport(INITIAL_WIDTH, INITIAL_HEIGHT, INITIAL_WIDTH, INITIAL_HEIGHT);
     private final InputState input = new InputState();
@@ -358,7 +360,7 @@ public final class LogikaEngine {
         status = switch (nextTool) {
             case INTERACT -> "Interact directly: select, copy, drag, click nodes, or use sources.";
             case PLACE_BUTTON, PLACE_SWITCH, PLACE_NAND, PLACE_LED ->
-                    "Hover empty canvas to place, or click an external + slot around a component.";
+                    "Hover a component for dark + slots; hover a slot to preview; click the slot to place.";
         };
         audio.playClick(true);
     }
@@ -377,11 +379,11 @@ public final class LogikaEngine {
         ComponentKind kind = tool.componentKind().orElseThrow();
         Vec2 center = placementCenter(kind, world);
         if (collidesWithExistingComponent(componentBounds(kind, center))) {
-            status = "Placement blocked: use a visible external + slot or an empty grid area.";
+            status = "Placement blocked: use a visible dark + slot or an empty grid area.";
             audio.playClick(false);
             return;
         }
-        placeComponent(kind, new PlacementCandidate(center, placementAlignment().label(), null));
+        placeComponent(kind, new PlacementCandidate(center, placementAlignment().label(), null, null));
     }
 
     private void placeComponent(ComponentKind kind, PlacementCandidate candidate) {
@@ -743,62 +745,62 @@ public final class LogikaEngine {
         if (!tool.isPlacement() || toolbar.contains(input.mouseY(), viewport.windowHeight()) || input.leftDown() || input.panning()) return List.of();
         ComponentKind kind = tool.componentKind().orElseThrow();
         Vec2 world = camera.screenToWorld(new Vec2(input.mouseX(), input.mouseY()), viewport);
-        Optional<PlacementCandidate> hoveredSlot = placementSlotAt(kind, world);
-        if (hoveredSlot.isPresent()) return List.of(toPlacementPreview(kind, hoveredSlot.get()));
         Optional<CircuitComponent> hoveredComponent = circuit.findComponent(world);
-        if (hoveredComponent.isPresent()) {
-            List<PlacementPreview> previews = new ArrayList<>();
-            for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, hoveredComponent.get())) previews.add(toPlacementPreview(kind, candidate));
-            return previews;
-        }
+        if (hoveredComponent.isPresent()) return slotPreviewsFor(kind, hoveredComponent.get(), world);
+        Optional<PlacementCandidate> hoveredSlot = placementSlotAt(kind, world);
+        if (hoveredSlot.isPresent()) return slotPreviewsFor(kind, componentBySlot(kind, hoveredSlot.get()).orElse(null), world);
         Vec2 center = placementCenter(kind, world);
         Rect bounds = componentBounds(kind, center);
         return collidesWithExistingComponent(bounds) ? List.of() : List.of(new PlacementPreview(kind, bounds, placementAlignment().label()));
     }
 
-    private PlacementPreview toPlacementPreview(ComponentKind kind, PlacementCandidate candidate) {
-        return new PlacementPreview(kind, componentBounds(kind, candidate.center()), candidate.label());
+    private List<PlacementPreview> slotPreviewsFor(ComponentKind kind, CircuitComponent component, Vec2 mouseWorld) {
+        if (component == null) return List.of();
+        List<PlacementPreview> previews = new ArrayList<>();
+        for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
+            boolean hovered = candidate.slotBounds().contains(mouseWorld);
+            previews.add(new PlacementPreview(kind, candidate.slotBounds(), candidate.label(), true, hovered));
+            if (hovered) previews.add(new PlacementPreview(kind, componentBounds(kind, candidate.center()), candidate.label(), false, true));
+        }
+        return previews;
     }
 
-    private Optional<PlacementCandidate> placementSlotAt(ComponentKind kind, Vec2 world) {
+    private Optional<CircuitComponent> componentBySlot(ComponentKind kind, PlacementCandidate slot) {
         for (CircuitComponent component : circuit.components()) {
             for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
-                if (placementCandidateHit(kind, candidate, world)) return Optional.of(candidate);
+                if (candidate.side() == slot.side() && candidate.center().equals(slot.center())) return Optional.of(component);
             }
         }
         return Optional.empty();
     }
 
-    private boolean placementCandidateHit(ComponentKind kind, PlacementCandidate candidate, Vec2 world) {
-        if (componentBounds(kind, candidate.center()).contains(world)) return true;
-        if (candidate.side() == null) return false;
-        return placementSlotHitBounds(kind, candidate).contains(world);
-    }
-
-    private Rect placementSlotHitBounds(ComponentKind kind, PlacementCandidate candidate) {
-        Vec2 center = placementSlotHotspotCenter(kind, candidate);
-        double radius = PLACEMENT_SLOT_HIT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
-        return new Rect(center.x() - radius, center.y() - radius, radius * 2.0, radius * 2.0);
-    }
-
-    private Vec2 placementSlotHotspotCenter(ComponentKind kind, PlacementCandidate candidate) {
-        Rect bounds = componentBounds(kind, candidate.center());
-        return switch (candidate.side()) {
-            case LEFT -> new Vec2(bounds.x() + bounds.width(), bounds.centerY());
-            case RIGHT -> new Vec2(bounds.x(), bounds.centerY());
-            case TOP -> new Vec2(bounds.centerX(), bounds.y() + bounds.height());
-            case BOTTOM -> new Vec2(bounds.centerX(), bounds.y());
-        };
+    private Optional<PlacementCandidate> placementSlotAt(ComponentKind kind, Vec2 world) {
+        for (CircuitComponent component : circuit.components()) {
+            for (PlacementCandidate candidate : adjacentPlacementCandidates(kind, component)) {
+                if (candidate.slotBounds().contains(world)) return Optional.of(candidate);
+            }
+        }
+        return Optional.empty();
     }
 
     private List<PlacementCandidate> adjacentPlacementCandidates(ComponentKind kind, CircuitComponent target) {
         List<PlacementCandidate> candidates = new ArrayList<>(4);
         Rect targetBounds = target.bounds();
         for (PlacementSide side : PlacementSide.values()) {
+            Rect slotBounds = side.slotBounds(targetBounds);
             Vec2 center = side.candidateCenter(kind, targetBounds);
-            if (!collidesWithExistingComponent(componentBounds(kind, center))) candidates.add(new PlacementCandidate(center, side.label(), side));
+            if (!collidesWithExistingComponent(componentBounds(kind, center)) && !slotCollidesWithOtherComponent(slotBounds, target.id())) {
+                candidates.add(new PlacementCandidate(center, side.label(), side, slotBounds));
+            }
         }
         return candidates;
+    }
+
+    private boolean slotCollidesWithOtherComponent(Rect slotBounds, int sourceComponentId) {
+        for (CircuitComponent component : circuit.components()) {
+            if (component.id() != sourceComponentId && overlaps(slotBounds, component.bounds())) return true;
+        }
+        return false;
     }
 
     private Vec2 placementCenter(ComponentKind kind, Vec2 rawWorld) {
@@ -1060,15 +1062,25 @@ public final class LogikaEngine {
     private record ClipboardWire(int fromComponentId, int fromIndex, int toComponentId, int toIndex) { }
     private record EditorSnapshot(Circuit.Snapshot circuit, List<Integer> selectedIds, PinRef pendingWire, Tool tool, ChainVariant chainVariant) { }
     private record UndoableEdit(String label, EditorSnapshot before, EditorSnapshot after) { }
-    private record PlacementCandidate(Vec2 center, String label, PlacementSide side) { }
+    private record PlacementCandidate(Vec2 center, String label, PlacementSide side, Rect slotBounds) { }
 
     private enum PlacementSide {
         LEFT("left side"), RIGHT("right side"), TOP("top side"), BOTTOM("bottom side");
         private final String label;
         PlacementSide(String label) { this.label = label; }
         String label() { return label; }
+        Rect slotBounds(Rect target) {
+            double margin = PLACEMENT_SLOT_MARGIN_WORLD;
+            double thickness = PLACEMENT_SLOT_THICKNESS_WORLD;
+            return switch (this) {
+                case LEFT -> new Rect(target.x() - margin - thickness, target.y(), thickness, target.height());
+                case RIGHT -> new Rect(target.x() + target.width() + margin, target.y(), thickness, target.height());
+                case TOP -> new Rect(target.x(), target.y() - margin - thickness, target.width(), thickness);
+                case BOTTOM -> new Rect(target.x(), target.y() + target.height() + margin, target.width(), thickness);
+            };
+        }
         Vec2 candidateCenter(ComponentKind kind, Rect target) {
-            double gap = UiMetrics.COMPONENT_COLLISION_GAP_WORLD;
+            double gap = PLACEMENT_SLOT_MARGIN_WORLD + PLACEMENT_SLOT_THICKNESS_WORLD + PLACEMENT_CANDIDATE_MARGIN_WORLD;
             return switch (this) {
                 case LEFT -> new Vec2(target.x() - gap - kind.width() / 2.0, target.centerY());
                 case RIGHT -> new Vec2(target.x() + target.width() + gap + kind.width() / 2.0, target.centerY());
