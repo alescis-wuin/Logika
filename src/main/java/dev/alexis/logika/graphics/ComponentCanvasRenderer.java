@@ -12,6 +12,7 @@ import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_CENTER;
@@ -30,11 +31,13 @@ final class ComponentCanvasRenderer {
         this.canvas = canvas;
     }
 
-    void drawPlacementPreview(Camera2D camera, Viewport viewport, PlacementPreview preview) {
-        if (preview == null) {
-            return;
+    void drawPlacementPreviews(Camera2D camera, Viewport viewport, List<PlacementPreview> previews) {
+        for (PlacementPreview preview : previews) {
+            drawPlacementPreview(camera, viewport, preview);
         }
+    }
 
+    private void drawPlacementPreview(Camera2D camera, Viewport viewport, PlacementPreview preview) {
         Rect bounds = preview.bounds();
         Vec2 topLeft = camera.worldToScreen(new Vec2(bounds.x(), bounds.y()), viewport);
         double width = bounds.width() * camera.zoom();
