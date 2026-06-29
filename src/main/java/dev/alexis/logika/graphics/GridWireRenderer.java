@@ -20,7 +20,7 @@ import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_RIGHT;
 final class GridWireRenderer {
     private static final double CONNECTION_EFFECT_SECONDS = 0.74;
     private static final double ACTIVE_WIRE_PULSE_SPEED = 5.8;
-    private static final double SIGNAL_BAND_SPEED = 0.82;
+    private static final double SIGNAL_BAND_SPEED = 0.66;
     private static final double SIGNAL_BAND_HALF_WIDTH = 0.17;
     private static final int SIGNAL_BAND_SEGMENTS = 34;
 
@@ -219,13 +219,13 @@ final class GridWireRenderer {
             return;
         }
         double softened = smoothStep(clamp(strength, 0.0, 1.0));
-        double radius = 13.0 + 22.0 * softened;
-        int fillAlpha = (int) Math.round(36.0 + 78.0 * softened);
-        int strokeAlpha = (int) Math.round(120.0 + 110.0 * softened);
+        double radius = 11.0 + 14.0 * softened;
+        int fillAlpha = (int) Math.round(26.0 + 54.0 * softened);
+        int strokeAlpha = (int) Math.round(96.0 + 72.0 * softened);
         canvas.circle(screen.x(), screen.y(), radius, RenderTheme.ACTIVE.withAlpha(fillAlpha));
-        canvas.strokeCircle(screen.x(), screen.y(), radius * 0.64, RenderTheme.ACTIVE.withAlpha(strokeAlpha),
-                (float) (2.0 + 2.2 * softened));
-        canvas.circle(screen.x(), screen.y(), 4.5 + 4.0 * softened, RenderTheme.TEXT.withAlpha((int) Math.round(78.0 + 122.0 * softened)));
+        canvas.strokeCircle(screen.x(), screen.y(), radius * 0.62, RenderTheme.ACTIVE.withAlpha(strokeAlpha),
+                (float) (1.6 + 1.4 * softened));
+        canvas.circle(screen.x(), screen.y(), 4.0 + 2.4 * softened, RenderTheme.TEXT.withAlpha((int) Math.round(70.0 + 96.0 * softened)));
     }
 
     private void drawTargetHalo(Camera2D camera, Viewport viewport, Circuit circuit, WireTargetFeedback targetFeedback,
