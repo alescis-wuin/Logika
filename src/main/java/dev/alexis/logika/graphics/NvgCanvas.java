@@ -72,6 +72,12 @@ final class NvgCanvas {
         fill(color);
     }
 
+    void strokeCircle(double x, double y, double radius, RenderTheme.Rgba color, float strokeWidth) {
+        nvgBeginPath(vg);
+        nvgCircle(vg, (float) x, (float) y, (float) radius);
+        stroke(color, strokeWidth);
+    }
+
     void line(double x1, double y1, double x2, double y2, RenderTheme.Rgba color, float strokeWidth) {
         nvgBeginPath(vg);
         nvgMoveTo(vg, (float) x1, (float) y1);
