@@ -11,11 +11,14 @@ import dev.alexis.logika.ui.UiMetrics;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
 
+import java.util.Set;
+
 import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_CENTER;
 
 final class ComponentCanvasRenderer {
     private static final double MIN_TITLE_SIZE = 7.0;
     private static final double MIN_BADGE_SCALE = 0.42;
+    private static final RenderTheme.Rgba SELECTION_COLOR = new RenderTheme.Rgba(87, 177, 255, 255);
     private static final RenderTheme.Rgba SIGNAL_ON = new RenderTheme.Rgba(20, 105, 72, 242);
     private static final RenderTheme.Rgba SIGNAL_OFF = new RenderTheme.Rgba(28, 37, 56, 236);
 
@@ -25,7 +28,7 @@ final class ComponentCanvasRenderer {
         this.canvas = canvas;
     }
 
-    void draw(Camera2D camera, Viewport viewport, Circuit circuit, int selectedId, int hoveredId,
+    void draw(Camera2D camera, Viewport viewport, Circuit circuit, Set<Integer> selectedIds, int hoveredId,
               PinRef hoveredPin, PinRef pendingWire) {
         for (CircuitComponent component : circuit.components()) {
             Rect bounds = component.bounds();
@@ -33,21 +36,29 @@ final class ComponentCanvasRenderer {
             double width = bounds.width() * camera.zoom();
             double height = bounds.height() * camera.zoom();
             boolean active = component.visualActive();
+            boolean selected = selectedIds.contains(component.id());
             boolean hovered = component.id() == hoveredId;
-            RenderTheme.Rgba border = hovered ? new RenderTheme.Rgba(216, 232, 255, 255)
-                    : component.id() == selectedId ? RenderTheme.ACCENT : active ? RenderTheme.ACTIVE : RenderTheme.PANEL_STROKE;
+            RenderTheme.Rgba border = borderColor(active, selected, hovered);
             double radius = Math.min(clamp(UiMetrics.COMPONENT_RADIUS_SCREEN * Math.sqrt(camera.zoom()), 8.0, 32.0),
                     Math.min(width, height) * 0.28);
 
-            canvas.fillRound(topLeft.x() + 6.0, topLeft.y() + 12.0, width, height, radius, new RenderTheme.Rgba(0, 0, 0, 100));
+            canvas.fillRound(topLeft.x() + 6.0, topLeft.y() + 12.0, width, height, radius, new RenderTheme.Rgba(0, 0, 0, 105));
+            if (selected) {
+                canvas.fillRound(topLeft.x() - 5.0, topLeft.y() - 5.0, width + 10.0, height + 10.0,
+                        radius + 6.0, new RenderTheme.Rgba(68, 161, 255, 45));
+            }
             canvas.fillRound(topLeft.x(), topLeft.y(), width, height, radius, bodyColor(component.kind(), active));
-            canvas.strokeRound(topLeft.x(), topLeft.y(), width, height, radius, border, hovered ? 3.6f : 2.0f);
+            canvas.strokeRound(topLeft.x(), topLeft.y(), width, height, radius, border,
+                    hovered ? 3.8f : selected ? 3.2f : 2.0f);
             drawComponentHeader(component, topLeft, width, height);
 
             if (width >= 118.0 && height >= 82.0) {
                 for (PinEndpoint pin : component.pins()) {
                     drawSignalBadge(camera, viewport, circuit, pin, topLeft, width, height, hovered);
                 }
+            }
+            if (selected) {
+                drawSelectionBadge(topLeft.x() + width - 62.0, topLeft.y() + 14.0);
             }
             if (hovered) {
                 drawTrashButton(topLeft.x() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN, topLeft.y() + UiMetrics.TRASH_BUTTON_MARGIN_SCREEN);
@@ -124,6 +135,12 @@ final class ComponentCanvasRenderer {
         canvas.circle(screen.x(), screen.y(), radius, value ? RenderTheme.ACTIVE : output ? RenderTheme.INACTIVE : new RenderTheme.Rgba(99, 120, 160, 255));
     }
 
+    private void drawSelectionBadge(double x, double y) {
+        canvas.fillRound(x, y, 48.0, 28.0, 14.0, new RenderTheme.Rgba(37, 89, 152, 238));
+        canvas.strokeRound(x, y, 48.0, 28.0, 14.0, SELECTION_COLOR, 1.6f);
+        canvas.text("SEL", (float) (x + 24.0), (float) (y + 14.0), 13.5f, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
+    }
+
     private void drawTrashButton(double x, double y) {
         double size = UiMetrics.TRASH_BUTTON_SIZE_SCREEN;
         double centerX = x + size / 2.0;
@@ -133,11 +150,26 @@ final class ComponentCanvasRenderer {
         canvas.trashGlyph(x, y, RenderTheme.TEXT);
     }
 
-    private RenderTheme.Rgba bodyColor(ComponentKind kind, boolean active) {
-        if (!active) {
-            return new RenderTheme.Rgba(16, 23, 38, 252);
+    private RenderTheme.Rgba borderColor(boolean active, boolean selected, boolean hovered) {
+        if (hovered) {
+            return new RenderTheme.Rgba(216, 232, 255, 255);
         }
-        return kind == ComponentKind.LED ? new RenderTheme.Rgba(122, 83, 17, 252) : new RenderTheme.Rgba(20, 99, 70, 252);
+        if (selected) {
+            return SELECTION_COLOR;
+        }
+        return active ? RenderTheme.ACTIVE : RenderTheme.PANEL_STROKE;
+    }
+
+    private RenderTheme.Rgba bodyColor(ComponentKind kind, boolean active) {
+        if (active) {
+            return kind == ComponentKind.LED ? new RenderTheme.Rgba(122, 83, 17, 252) : new RenderTheme.Rgba(20, 99, 70, 252);
+        }
+        return switch (kind) {
+            case BUTTON -> new RenderTheme.Rgba(18, 45, 79, 252);
+            case SWITCH -> new RenderTheme.Rgba(45, 31, 82, 252);
+            case NAND -> new RenderTheme.Rgba(32, 43, 76, 252);
+            case LED -> new RenderTheme.Rgba(55, 42, 23, 252);
+        };
     }
 
     private static double clamp(double value, double min, double max) {

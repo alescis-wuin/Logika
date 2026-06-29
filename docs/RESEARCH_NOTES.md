@@ -1,35 +1,28 @@
 # Research Notes
 
-## GLFW and OpenGL
+## GLFW
 
-GLFW initialization hints are applied before `glfwInit()`. Logika uses this rule to request the X11 platform when a Linux Wayland session is detected.
+The editor keeps GLFW callbacks for mouse and keyboard transitions so selection, drag, shortcut, and chaining states are processed at the moment the event is received.
 
-GLFW exposes both a window content size and a framebuffer size. Logika stores both values in `Viewport`: NanoVG receives the content size and device pixel ratio, while OpenGL viewport updates use framebuffer pixels.
+The render loop still polls events every frame because Logika renders continuously.
 
 ## NanoVG
 
-NanoVG draws in screen coordinates. World positions are converted by `Camera2D` before rendering components, pins, wires, hover affordances, and the grid.
+NanoVG remains the UI layer. World positions are converted with `Camera2D`, then rendered as screen-space cards, pins, wires, badges, overlays, and selection rectangles.
 
-```java
-nvgBeginFrame(vg, windowWidth, windowHeight, devicePixelRatio);
-```
+## UX principles used
 
-## UI and UX principles used
-
-- visible state: active placement tool, pending node, simulation state, hover state, and status are always shown;
-- recognition over recall: component placement remains visible in the bottom toolbar;
-- direct manipulation: linking, source interaction, movement, and deletion happen directly on the grid;
-- minimalist V1 surface: placement, direct node linking, simulation, and reset only;
-- generous targets: toolbar buttons and pins use large hit areas;
-- state is not color-only: logical values also appear as text labels.
+- visible editor state;
+- direct manipulation on the circuit canvas;
+- large pointer targets;
+- text labels in addition to color;
+- predictable copy/paste of blocks and internal wires;
+- fast chaining with an explicit variant shortcut.
 
 ## Deferred items
 
-- save/load;
 - undo/redo;
-- component palette search;
+- save/load;
 - reusable subcircuits;
-- clocks and timing components;
-- loop diagnostics;
-- custom icon and font assets;
-- richer OpenAL feedback.
+- graph diagnostics;
+- accessibility presets.

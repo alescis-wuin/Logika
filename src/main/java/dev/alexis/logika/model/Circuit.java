@@ -3,9 +3,12 @@ package dev.alexis.logika.model;
 import dev.alexis.logika.util.Vec2;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class Circuit {
     private final List<CircuitComponent> components = new ArrayList<>();
@@ -105,6 +108,12 @@ public final class Circuit {
     public void removeComponent(int id) {
         components.removeIf(component -> component.id() == id);
         wires.removeIf(item -> item.touchesComponent(id));
+    }
+
+    public void removeComponents(Collection<Integer> ids) {
+        Set<Integer> idSet = new HashSet<>(ids);
+        components.removeIf(component -> idSet.contains(component.id()));
+        wires.removeIf(item -> idSet.contains(item.from().componentId()) || idSet.contains(item.to().componentId()));
     }
 
     public void clear() {

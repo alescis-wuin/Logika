@@ -21,9 +21,10 @@ final class EditorOverlayRenderer {
     }
 
     void draw(Toolbar toolbar, Viewport viewport, Tool tool, PinRef pendingWire, boolean draggingComponent,
-              boolean simulationRunning, String status) {
+              boolean simulationRunning, String status, int selectedCount, int clipboardCount, String chainVariantLabel) {
         drawToolbar(toolbar, viewport, tool, simulationRunning);
-        drawStatus(tool, pendingWire, draggingComponent, simulationRunning, status, viewport);
+        drawStatus(tool, pendingWire, draggingComponent, simulationRunning, status, selectedCount, clipboardCount,
+                chainVariantLabel, viewport);
     }
 
     private void drawToolbar(Toolbar toolbar, Viewport viewport, Tool tool, boolean simulationRunning) {
@@ -51,22 +52,26 @@ final class EditorOverlayRenderer {
     }
 
     private void drawStatus(Tool tool, PinRef pendingWire, boolean draggingComponent, boolean simulationRunning,
-                            String status, Viewport viewport) {
-        double width = Math.min(1120.0, viewport.windowWidth() - 40.0);
-        canvas.fillRound(20.0, 16.0, width, 92.0, 22.0, new RenderTheme.Rgba(14, 21, 36, 236));
-        canvas.strokeRound(20.0, 16.0, width, 92.0, 22.0, RenderTheme.PANEL_STROKE, 1.3f);
-        String mode = "Tool: " + tool.label() + "  ·  Simulation: " + (simulationRunning ? "live" : "paused");
+                            String status, int selectedCount, int clipboardCount, String chainVariantLabel,
+                            Viewport viewport) {
+        double width = Math.min(1180.0, viewport.windowWidth() - 40.0);
+        canvas.fillRound(20.0, 16.0, width, 110.0, 22.0, new RenderTheme.Rgba(14, 21, 36, 236));
+        canvas.strokeRound(20.0, 16.0, width, 110.0, 22.0, RenderTheme.PANEL_STROKE, 1.3f);
+        String mode = "Tool: " + tool.label()
+                + "  ·  Simulation: " + (simulationRunning ? "live" : "paused")
+                + "  ·  Selected: " + selectedCount
+                + "  ·  Chain: " + chainVariantLabel;
         if (pendingWire != null) {
-            mode += "  ·  Node linking: choose a compatible node";
+            mode += "  ·  Node linking";
         } else if (draggingComponent) {
             mode += "  ·  Dragging";
         }
         canvas.text(mode, 42.0f, 40.0f, 18.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT, true);
         canvas.text(status, 42.0f, 67.0f, 15.5f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
-        canvas.text("Signal badges show name/value · Drag: hold + move · Delete: hover trash", 42.0f, 91.0f,
-                14.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
-        canvas.text("Wheel zoom · RMB/MMB/Space pan · Esc cancel · S sim · C center", viewport.windowWidth() - 28.0f,
-                40.0f, 14.0f, NVG_ALIGN_RIGHT, RenderTheme.TEXT_MUTED, false);
+        canvas.text("Area select: drag empty grid · Multi: Shift/Ctrl-click · Copy/Paste: Ctrl+C/Ctrl+V · Variant: V",
+                42.0f, 94.0f, 14.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
+        canvas.text("Clipboard: " + clipboardCount + " · Wheel zoom · RMB/MMB/Space pan · Esc cancel · Del removes selection",
+                viewport.windowWidth() - 28.0f, 40.0f, 14.0f, NVG_ALIGN_RIGHT, RenderTheme.TEXT_MUTED, false);
     }
 
     private static boolean isSelected(Toolbar.Action action, Tool tool) {

@@ -1,6 +1,6 @@
 # Logika
 
-Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.0 focuses on a clear 2D editor loop: camera, zoom-at-cursor, grid placement, direct node linking, larger readable components, a simplified bottom toolbar, basic components, wires, and live logic simulation.
+Logika is a small Java/LWJGL logic-circuit sandbox. Version 1.1 keeps the clear 2D editor loop from V1 and adds a more playful editing workflow: multi-selection, area selection, grouped drag-and-drop, block copy/paste, preserved internal wires, and component-body chaining for faster circuit construction.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ On Linux Wayland sessions, Logika requests GLFW's X11 backend before `glfwInit()
 ```bash
 git clone https://github.com/alescis-wuin/Logika.git
 cd Logika
-git checkout ai/feat/ui-readability
+git checkout ai/feat/editor-ux-chain-selection
 mvn clean package
 mvn exec:java
 ```
@@ -31,16 +31,19 @@ LOGIKA_FONT=/path/to/Inter-Regular.ttf LOGIKA_FONT_BOLD=/path/to/Inter-SemiBold.
 - Mouse wheel: zoom at cursor.
 - Right mouse drag, middle mouse drag, or Space + left drag: pan.
 - Bottom toolbar: choose `Button`, `Switch`, `NAND`, or `LED`, then click an empty grid cell.
-- Node linking: click one node, then click a compatible node. Output → input and input → output are both accepted.
-- Signal badges: each visible node has an internal two-row name/value badge.
+- Selection: click a component to select it; Shift/Ctrl-click toggles it in the current selection.
+- Area selection: drag from an empty grid cell to select every component touched by the selection rectangle.
+- Group move: drag any selected component to move the whole selected block.
+- Copy/paste: `Ctrl+C` copies selected components, their source states, and internal wires; `Ctrl+V` pastes the block near the cursor; `Ctrl+D` duplicates.
+- Node linking: click one node, then click a compatible node. Output -> input and input -> output are both accepted.
+- Chaining: click an output node, then click a component body. The connection is made automatically and the target output remains selected for the next link.
+- Chain variant: press `V` to cycle between automatic input, input A, input B, and A+B for NAND-as-inverter wiring.
 - Button component: hold left click on the body to emit `true`.
 - Switch component: click the body to toggle `true` or `false`.
-- Move component: hold on a component body and drag.
-- Delete component: hover a component and click the trash icon in its upper-left corner.
-- `Esc`: cancel pending node/tool state.
+- Delete component(s): hover a component and click its trash icon, or press `Delete` for the current selection.
+- `Esc`: cancel pending node/tool/area state.
 - `S`: pause/resume simulation.
-- `Delete`: remove selected component.
 - `C`: re-center the camera.
 - `1`/`2`/`3`/`4`: choose Button, Switch, NAND, LED.
 
-See [`docs/CONTROLS.md`](docs/CONTROLS.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md).
+See [`docs/CONTROLS.md`](docs/CONTROLS.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md), and [`docs/UI_UX_PLAN.md`](docs/UI_UX_PLAN.md).

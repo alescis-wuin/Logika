@@ -2,16 +2,14 @@
 
 ## Version 1.1
 
-- Add save/load in JSON.
-- Add undo/redo for placement, deletion, movement, and wiring.
-- Add copy/paste and box selection.
-- Add explicit cycle diagnostics.
-- Add keyboard-only alternatives for placement, movement, deletion, and connection.
+- Implement editor block selection and copy/paste workflow.
+- Implement component chaining variants.
+- Improve visual feedback for selection and chain state.
 
-## Version 1.2
+## Next
 
-- Add clocks, NOT, AND, OR, XOR, and richer IO components.
-- Add reusable subcircuits.
-- Add a property inspector.
-- Add STB-backed custom icon/font assets.
-- Add optional OpenAL sound themes.
+- Undo/redo.
+- Save/load.
+- Cycle diagnostics.
+- Keyboard-only editing paths.
+- Property inspector.
