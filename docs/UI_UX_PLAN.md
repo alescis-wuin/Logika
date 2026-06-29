@@ -2,35 +2,32 @@
 
 ## Implemented slice
 
-This branch focuses on editor workflow improvements that are useful before adding richer components or custom subcircuits.
+This branch builds on the block editing workflow and adds placement quality-of-life plus undo/redo.
 
-### Selection and block editing
+### Placement hologram
 
-- Single selection remains a plain left click.
-- Multi-selection uses Shift/Ctrl-click.
-- Empty-grid drag creates a world-space selection rectangle.
-- Dragging one selected component moves the full selected block.
-- `Ctrl+C` stores selected component kinds, center positions, source states, and internal wires.
-- `Ctrl+V` pastes the block near the cursor and tries nearby grid offsets if the first paste would collide.
-- `Ctrl+D` duplicates through the same copy/paste path.
+- A placement preview is shown while a placement tool is active.
+- The preview appears only if the computed placement rectangle is free.
+- The preview displays the component kind and active alignment mode.
 
-### Chaining
+### Alignment modes
 
-- Clicking an output node and then a component body connects to the chosen target automatically.
-- The output of the target component remains selected when it exists, so the player can continue chaining.
-- `V` cycles the target input policy: `Auto`, `A`, `B`, or `A+B`.
+- Default: snap to the grid.
+- `Alt`: free placement.
+- `Ctrl`: aligns candidate pins with opposite-direction pins on the same horizontal row.
+- `Ctrl+Alt`: aligns candidate left/right edges with components above.
 
-### Visual feedback
+### Undo/redo
 
-- Component bodies now use kind-specific colors.
-- Selected components receive a blue glow, stronger border, and `SEL` badge.
-- The top status panel shows selection count, clipboard count, chain variant, and active workflow hints.
-- Area selection is drawn directly in the canvas.
+- `Ctrl+Z`: undo.
+- `Ctrl+Y` or `Ctrl+Shift+Z`: redo.
+- History is snapshot-backed for full restoration of circuit structure and editor selection.
+- Tracked edits include placement, movement, connection, chaining, switch toggle, deletion, clear, paste, and duplicate.
 
 ## Next recommended slice
 
-1. Add undo/redo before adding more destructive actions.
-2. Add save/load so custom user components can persist.
-3. Add a property panel for selected blocks and components.
-4. Add keyboard-only editing paths and theme presets for accessibility.
-5. Add graph diagnostics for cycles and invalid custom components.
+1. Replace snapshot history with command objects when circuit sizes grow.
+2. Add save/load JSON.
+3. Add reusable custom components.
+4. Add wire selection/rerouting.
+5. Add graph diagnostics.

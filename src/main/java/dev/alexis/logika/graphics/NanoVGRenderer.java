@@ -3,6 +3,7 @@ package dev.alexis.logika.graphics;
 import dev.alexis.logika.engine.Viewport;
 import dev.alexis.logika.model.Circuit;
 import dev.alexis.logika.model.PinRef;
+import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.ui.Tool;
 import dev.alexis.logika.ui.Toolbar;
 import dev.alexis.logika.ui.UiMetrics;
@@ -41,9 +42,10 @@ public final class NanoVGRenderer implements AutoCloseable {
     }
 
     public void render(Viewport viewport, Camera2D camera, Circuit circuit, Toolbar toolbar, Tool tool,
-                       PinRef pendingWire, Set<Integer> selectedComponentIds, int hoveredComponentId,
-                       boolean draggingComponent, Rect selectionMarquee, boolean simulationRunning, String status,
-                       double mouseX, double mouseY, int clipboardCount, String chainVariantLabel) {
+                       PlacementPreview placementPreview, PinRef pendingWire, Set<Integer> selectedComponentIds,
+                       int hoveredComponentId, boolean draggingComponent, Rect selectionMarquee,
+                       boolean simulationRunning, String status, double mouseX, double mouseY, int clipboardCount,
+                       String chainVariantLabel, int undoCount, int redoCount) {
         glViewport(0, 0, viewport.framebufferWidth(), viewport.framebufferHeight());
         glClearColor(RenderTheme.BACKGROUND.rf(), RenderTheme.BACKGROUND.gf(), RenderTheme.BACKGROUND.bf(), 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -52,10 +54,10 @@ public final class NanoVGRenderer implements AutoCloseable {
 
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
         canvas.fillRect(0, 0, viewport.windowWidth(), viewport.windowHeight(), RenderTheme.BACKGROUND);
-        circuitRenderer.draw(camera, viewport, circuit, selectedComponentIds, hoveredComponentId, hoveredPin,
-                pendingWire, selectionMarquee, mouseX, mouseY);
+        circuitRenderer.draw(camera, viewport, circuit, placementPreview, selectedComponentIds, hoveredComponentId,
+                hoveredPin, pendingWire, selectionMarquee, mouseX, mouseY);
         overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, simulationRunning, status,
-                selectedComponentIds.size(), clipboardCount, chainVariantLabel);
+                selectedComponentIds.size(), clipboardCount, chainVariantLabel, undoCount, redoCount);
         nvgEndFrame(vg);
     }
 

@@ -1,15 +1,16 @@
 # Roadmap
 
-## Version 1.1
+## Version 1.2
 
-- Implement editor block selection and copy/paste workflow.
-- Implement component chaining variants.
-- Improve visual feedback for selection and chain state.
+- Add placement holograms.
+- Add placement alignment modes: grid, free, pin row, and edge column.
+- Add snapshot-backed undo/redo for structural editor edits.
 
 ## Next
 
-- Undo/redo.
-- Save/load.
-- Cycle diagnostics.
-- Keyboard-only editing paths.
-- Property inspector.
+- Save/load JSON.
+- Reusable custom components.
+- Wire selection and rerouting.
+- Graph diagnostics.
+- Accessibility presets.
+- Command-based history if snapshot history becomes too heavy.
