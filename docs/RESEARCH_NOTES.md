@@ -2,7 +2,7 @@
 
 ## GLFW
 
-The editor keeps GLFW callbacks for mouse and keyboard transitions so selection, drag, shortcut, undo/redo, modifier, and chaining states are processed when events are received.
+The editor keeps GLFW callbacks for mouse and keyboard transitions so selection, drag, shortcut, undo/redo, modifier, placement, cancellation, and explicit node-linking states are processed when events are received.
 
 The render loop still polls events every frame because Logika renders continuously.
 
@@ -16,13 +16,14 @@ NanoVG remains the UI layer. World positions are converted with `Camera2D`, then
 
 - visible editor state;
 - direct manipulation on the circuit canvas;
+- `Esc` and right click cancel active editor state;
 - placement previews only for valid placements;
 - modifier-based alignment without adding toolbar complexity;
 - large pointer targets;
 - text labels in addition to color;
 - predictable copy/paste of blocks and internal wires;
 - undo/redo for destructive and structural edits;
-- fast chaining with an explicit variant shortcut.
+- explicit node-to-node linking without automatic chaining.
 
 ## Deferred items
 
