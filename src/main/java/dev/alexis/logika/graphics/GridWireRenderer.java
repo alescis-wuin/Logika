@@ -45,6 +45,7 @@ final class GridWireRenderer {
         drawWires(camera, viewport, circuit, timeSeconds);
         drawConnectionEffects(camera, viewport, circuit, timeSeconds);
         drawPendingWire(camera, viewport, circuit, pendingWire, targetFeedback, timeSeconds, mouseX, mouseY);
+        drawTargetHalo(camera, viewport, circuit, targetFeedback, timeSeconds);
     }
 
     private void drawGrid(Camera2D camera, Viewport viewport) {
@@ -162,6 +163,24 @@ final class GridWireRenderer {
         RenderTheme.Rgba color = wireColor(active, pending, validPreview, activePulse);
         canvas.bezier(start.x(), start.y(), end.x(), end.y(), control, shadow, shadowWidth);
         canvas.bezier(start.x(), start.y(), end.x(), end.y(), control, color, coreWidth);
+    }
+
+    private void drawTargetHalo(Camera2D camera, Viewport viewport, Circuit circuit, WireTargetFeedback targetFeedback,
+                                double timeSeconds) {
+        if (targetFeedback == null || !targetFeedback.active()) {
+            return;
+        }
+        Optional<Vec2> worldPosition = circuit.pinPosition(targetFeedback.pin());
+        if (worldPosition.isEmpty()) {
+            return;
+        }
+        Vec2 screen = camera.worldToScreen(worldPosition.get(), viewport);
+        double pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 7.2);
+        RenderTheme.Rgba color = targetFeedback.compatible() ? RenderTheme.ACCENT : RenderTheme.DANGER;
+        double radius = 19.0 + pulse * 8.0;
+        canvas.circle(screen.x(), screen.y(), radius, color.withAlpha((int) Math.round(34.0 + (1.0 - pulse) * 28.0)));
+        canvas.strokeCircle(screen.x(), screen.y(), radius * 0.72,
+                color.withAlpha((int) Math.round(152.0 + pulse * 72.0)), (float) (2.0 + pulse * 1.4));
     }
 
     private void drawConnectionEffect(Camera2D camera, Viewport viewport, Vec2 startWorld, Vec2 endWorld, double progress) {
