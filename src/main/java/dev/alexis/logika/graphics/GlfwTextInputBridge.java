@@ -2,13 +2,22 @@ package dev.alexis.logika.graphics;
 
 import dev.alexis.logika.util.Vec2;
 import org.lwjgl.glfw.GLFWCharCallback;
+import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.glfw.GLFWMouseButtonCallback;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.DoubleBuffer;
 
-import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.glfwGetCursorPos;
+import static org.lwjgl.glfw.GLFW.glfwSetCharCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetCursorPosCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetMouseButtonCallback;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 final class GlfwTextInputBridge implements AutoCloseable {
@@ -17,9 +26,11 @@ final class GlfwTextInputBridge implements AutoCloseable {
     private GLFWCharCallback previousCharCallback;
     private GLFWKeyCallback previousKeyCallback;
     private GLFWMouseButtonCallback previousMouseButtonCallback;
+    private GLFWCursorPosCallback previousCursorPosCallback;
     private GLFWCharCallback charCallback;
     private GLFWKeyCallback keyCallback;
     private GLFWMouseButtonCallback mouseButtonCallback;
+    private GLFWCursorPosCallback cursorPosCallback;
     private boolean installed;
 
     GlfwTextInputBridge(long window, TextInputOverlay textInput) {
@@ -46,10 +57,23 @@ final class GlfwTextInputBridge implements AutoCloseable {
         });
         previousKeyCallback = glfwSetKeyCallback(window, keyCallback);
 
+        cursorPosCallback = GLFWCursorPosCallback.create((handle, x, y) -> {
+            if (textInput.handleMouseDrag(x, y)) {
+                return;
+            }
+            if (previousCursorPosCallback != null) {
+                previousCursorPosCallback.invoke(handle, x, y);
+            }
+        });
+        previousCursorPosCallback = glfwSetCursorPosCallback(window, cursorPosCallback);
+
         mouseButtonCallback = GLFWMouseButtonCallback.create((handle, button, action, mods) -> {
-            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            if (button == GLFW_MOUSE_BUTTON_LEFT) {
                 Vec2 cursor = cursorPosition(handle);
-                if (textInput.handleMousePress(cursor.x(), cursor.y())) {
+                if (action == GLFW_PRESS && textInput.handleMousePress(cursor.x(), cursor.y(), (mods & GLFW_MOD_SHIFT) != 0)) {
+                    return;
+                }
+                if (action == GLFW_RELEASE && textInput.handleMouseRelease()) {
                     return;
                 }
             }
@@ -67,6 +91,7 @@ final class GlfwTextInputBridge implements AutoCloseable {
             glfwSetCharCallback(window, previousCharCallback);
             glfwSetKeyCallback(window, previousKeyCallback);
             glfwSetMouseButtonCallback(window, previousMouseButtonCallback);
+            glfwSetCursorPosCallback(window, previousCursorPosCallback);
         }
         if (charCallback != null) {
             charCallback.free();
@@ -80,9 +105,14 @@ final class GlfwTextInputBridge implements AutoCloseable {
             mouseButtonCallback.free();
             mouseButtonCallback = null;
         }
+        if (cursorPosCallback != null) {
+            cursorPosCallback.free();
+            cursorPosCallback = null;
+        }
         previousCharCallback = null;
         previousKeyCallback = null;
         previousMouseButtonCallback = null;
+        previousCursorPosCallback = null;
         installed = false;
     }
 
