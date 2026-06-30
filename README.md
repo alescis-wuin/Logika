@@ -1,6 +1,6 @@
 # Logika
 
-Logika is a small Java/LWJGL logic-circuit sandbox for building and testing logic circuits. This branch adds cursor feedback, probable target halos, connection pulses, and active-wire breathing.
+Logika is a small Java/LWJGL logic-circuit sandbox for building and testing logic circuits. This branch adds a NanoVG text input bar for future component names, cable labels, and free text placement.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ Logika is a small Java/LWJGL logic-circuit sandbox for building and testing logi
 
 ```bash
 git fetch
-git checkout ai/feat/cursor-wire-feedback
+git checkout ai/feat/text-input-bar
 mvn clean package
 mvn exec:java
 ```
@@ -26,6 +26,6 @@ mvn exec:java
 - Select one component: left click a component body.
 - Move selected components: drag any selected component body.
 - Link nodes: click one node, then click a compatible node.
-- Cursor and wire feedback: interactive cursors, target halos, invalid-link styling, success pulses, and active-wire breathing.
+- Text bar: click the upper text bar, type Unicode text, use arrows/Home/End, Backspace/Delete, `Ctrl+A/C/X/V`, `Enter` to validate, or `Esc` to cancel.
 
 See [`docs/CONTROLS.md`](docs/CONTROLS.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md), and [`docs/UI_UX_PLAN.md`](docs/UI_UX_PLAN.md).
