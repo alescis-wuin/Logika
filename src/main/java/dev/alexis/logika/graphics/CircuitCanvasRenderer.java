@@ -3,6 +3,7 @@ package dev.alexis.logika.graphics;
 import dev.alexis.logika.engine.Viewport;
 import dev.alexis.logika.model.Circuit;
 import dev.alexis.logika.model.PinRef;
+import dev.alexis.logika.model.WireId;
 import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.util.Rect;
 import dev.alexis.logika.util.Vec2;
@@ -29,12 +30,15 @@ final class CircuitCanvasRenderer {
 
     void draw(Camera2D camera, Viewport viewport, Circuit circuit, List<PlacementPreview> placementPreviews,
               Set<Integer> selectedIds, int hoveredId, PinRef hoveredPin, PinRef pendingWire,
+              WireId selectedWireId, WireId hoveredWireId, int hoveredWireControlPointIndex,
               WireTargetFeedback targetFeedback, Rect selectionMarquee, double timeSeconds, double mouseX, double mouseY) {
-        gridWireRenderer.draw(camera, viewport, circuit, pendingWire, targetFeedback, timeSeconds, mouseX, mouseY);
+        gridWireRenderer.draw(camera, viewport, circuit, pendingWire, selectedWireId, hoveredWireId,
+                targetFeedback, timeSeconds, mouseX, mouseY);
         drawSelectionMarquee(camera, viewport, selectionMarquee);
         componentRenderer.drawPlacementPreviews(camera, viewport, placementPreviews);
         componentRenderer.draw(camera, viewport, circuit, selectedIds, hoveredId, hoveredPin, pendingWire);
-        gridWireRenderer.drawForegroundFeedback(camera, viewport, circuit, targetFeedback, timeSeconds);
+        gridWireRenderer.drawForegroundFeedback(camera, viewport, circuit, targetFeedback, selectedWireId,
+                hoveredWireControlPointIndex, timeSeconds);
     }
 
     private void drawSelectionMarquee(Camera2D camera, Viewport viewport, Rect worldRect) {
