@@ -12,7 +12,7 @@ public final class UiMetrics {
     public static final double PIN_RADIUS_SCREEN = 18.0;
     public static final double PIN_HOVER_EXTRA_SCREEN = 4.5;
     public static final double PIN_RING_PADDING_SCREEN = 5.0;
-    public static final double PIN_HIT_RADIUS_SCREEN = 46.0;
+    public static final double PIN_HIT_RADIUS_SCREEN = 94.0;
 
     public static final double COMPONENT_PADDING_SCREEN = 22.0;
     public static final double COMPONENT_RADIUS_SCREEN = 28.0;

@@ -30,12 +30,15 @@ public final class NanoVGRenderer implements AutoCloseable {
     private NvgCanvas canvas;
     private CircuitCanvasRenderer circuitRenderer;
     private EditorOverlayRenderer overlayRenderer;
+    private final CursorFeedback cursorFeedback = new CursorFeedback();
+    private final InteractionFeedbackResolver feedbackResolver = new InteractionFeedbackResolver();
 
     public void init() {
         vg = nvgCreate(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
         if (vg == NULL) {
             throw new IllegalStateException("Unable to create NanoVG context.");
         }
+        cursorFeedback.init();
         canvas = new NvgCanvas(vg);
         canvas.loadFonts();
         circuitRenderer = new CircuitCanvasRenderer(canvas);
@@ -51,12 +54,17 @@ public final class NanoVGRenderer implements AutoCloseable {
         glClearColor(RenderTheme.BACKGROUND.rf(), RenderTheme.BACKGROUND.gf(), RenderTheme.BACKGROUND.bf(), 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+        double timeSeconds = System.nanoTime() / 1_000_000_000.0;
         PinRef hoveredPin = circuitRenderer.hoveredPin(camera, viewport, circuit, mouseX, mouseY);
+        WireTargetFeedback targetFeedback = feedbackResolver.resolveWireTarget(camera, viewport, circuit,
+                pendingWire, hoveredPin, mouseX, mouseY);
+        cursorFeedback.apply(feedbackResolver.resolveCursor(toolbar, viewport, placementPreviews, selectedComponentIds,
+                hoveredComponentId, draggingComponent, hoveredPin, targetFeedback, mouseX, mouseY));
 
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
         canvas.fillRect(0, 0, viewport.windowWidth(), viewport.windowHeight(), RenderTheme.BACKGROUND);
         circuitRenderer.draw(camera, viewport, circuit, placementPreviews, selectedComponentIds, hoveredComponentId,
-                hoveredPin, pendingWire, selectionMarquee, mouseX, mouseY);
+                hoveredPin, pendingWire, targetFeedback, selectionMarquee, timeSeconds, mouseX, mouseY);
         overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, simulationRunning, status,
                 selectedComponentIds.size(), clipboardCount, chainVariantLabel, undoCount, redoCount);
         nvgEndFrame(vg);
@@ -68,6 +76,7 @@ public final class NanoVGRenderer implements AutoCloseable {
 
     @Override
     public void close() {
+        cursorFeedback.close();
         if (vg != NULL) {
             nvgDelete(vg);
             vg = NULL;
