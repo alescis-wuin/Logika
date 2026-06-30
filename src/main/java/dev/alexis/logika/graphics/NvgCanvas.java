@@ -4,10 +4,12 @@ import dev.alexis.logika.model.WirePath;
 import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.system.MemoryStack;
 
+import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_LEFT;
 import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_MIDDLE;
 import static org.lwjgl.nanovg.NanoVG.nvgBeginPath;
 import static org.lwjgl.nanovg.NanoVG.nvgBezierTo;
@@ -29,6 +31,7 @@ import static org.lwjgl.nanovg.NanoVG.nvgStrokeColor;
 import static org.lwjgl.nanovg.NanoVG.nvgStrokeWidth;
 import static org.lwjgl.nanovg.NanoVG.nvgText;
 import static org.lwjgl.nanovg.NanoVG.nvgTextAlign;
+import static org.lwjgl.nanovg.NanoVG.nvgTextBounds;
 
 final class NvgCanvas {
     private final long vg;
@@ -128,12 +131,31 @@ final class NvgCanvas {
             return;
         }
         nvgSave(vg);
-        nvgFontFace(vg, bold && boldFontLoaded ? "sans-bold" : "sans");
-        nvgFontSize(vg, size);
-        nvgTextAlign(vg, align | NVG_ALIGN_MIDDLE);
+        configureText(size, align, bold);
         fillColor(color);
         nvgText(vg, Math.round(x), Math.round(y), value);
         nvgRestore(vg);
+    }
+
+    double textWidth(String value, float size, boolean bold) {
+        if (!fontLoaded || value == null || value.isEmpty()) {
+            return 0.0;
+        }
+        nvgSave(vg);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer bounds = stack.mallocFloat(4);
+            configureText(size, NVG_ALIGN_LEFT, bold);
+            float advance = nvgTextBounds(vg, 0.0f, 0.0f, value, bounds);
+            return Math.max(0.0, Math.max(advance, bounds.get(2) - bounds.get(0)));
+        } finally {
+            nvgRestore(vg);
+        }
+    }
+
+    private void configureText(float size, int align, boolean bold) {
+        nvgFontFace(vg, bold && boldFontLoaded ? "sans-bold" : "sans");
+        nvgFontSize(vg, size);
+        nvgTextAlign(vg, align | NVG_ALIGN_MIDDLE);
     }
 
     private boolean loadFont(String face, String... candidates) {
