@@ -55,7 +55,7 @@ final class EditorOverlayRenderer {
         if (draggingWirePoint) mode += "  -  curve drag";
         canvas.text(mode, 42.0f, 40.0f, 18.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT, true);
         canvas.text(status, 42.0f, 67.0f, 15.5f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
-        canvas.text("Cable: select near the curve, click selected cable to add a point, drag numbered points.", 42.0f, 95.0f, 14.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
+        canvas.text("Cable: select near the curve, click selected cable to add a point, drag points, right-click point to delete.", 42.0f, 95.0f, 14.0f, NVG_ALIGN_LEFT, RenderTheme.TEXT_MUTED, false);
         canvas.text("Clipboard: " + clipboardCount, (float) (20.0 + width - 14.0), 40.0f, 14.0f, NVG_ALIGN_RIGHT, RenderTheme.TEXT_MUTED, false);
     }
 
