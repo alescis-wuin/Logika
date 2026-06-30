@@ -147,7 +147,14 @@ public final class LogikaEngine {
                 } else if (action == GLFW_RELEASE) handlePrimaryRelease();
             }
             if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                if (action == GLFW_PRESS) cancelEditorState("Right click");
+                if (action == GLFW_PRESS) {
+                    if (tryDeleteHoveredWireControlPoint()) {
+                        input.setPanDown(false);
+                        input.setPanning(false);
+                        return;
+                    }
+                    cancelEditorState("Right click");
+                }
                 input.setPanDown(action == GLFW_PRESS);
                 input.setPanning(action == GLFW_PRESS);
             }
@@ -380,6 +387,29 @@ public final class LogikaEngine {
         Rect picker = WireInspectorLayout.colorPickerBounds(viewport);
         WireInspectorLayout.Rgb rgb = WireInspectorLayout.colorAt(picker, input.mouseX(), input.mouseY());
         circuit.setWireColor(selectedWireId, rgb.packedRgb());
+    }
+
+    private boolean tryDeleteHoveredWireControlPoint() {
+        if (selectedWireId == null || editingWireColor || draggedWireId != null) return false;
+        int index = wireControlPointAt(input.mouseX(), input.mouseY());
+        if (index < 0) return false;
+        Optional<Wire> wire = circuit.wireById(selectedWireId);
+        if (wire.isEmpty() || index >= wire.get().controlPoints().size()) return false;
+        EditorSnapshot before = snapshotEditor();
+        List<Vec2> next = new ArrayList<>(wire.get().controlPoints());
+        next.remove(index);
+        circuit.replaceWire(wire.get().withControlPoints(next));
+        selectedWireId = wire.get().id();
+        hoveredWireControlPointIndex = -1;
+        draggedWireId = null;
+        draggedWireControlPointIndex = -1;
+        draggingWireControlPoint = false;
+        wireDragStartSnapshot = null;
+        recordEdit("Delete cable curve point", before);
+        updateHoverState();
+        status = "Cable curve point deleted.";
+        audio.playClick(false);
+        return true;
     }
 
     private boolean tryBeginWireControlPointDrag() {
