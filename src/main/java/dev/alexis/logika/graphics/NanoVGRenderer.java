@@ -14,6 +14,7 @@ import dev.alexis.logika.util.Rect;
 import java.util.List;
 import java.util.Set;
 
+import static org.lwjgl.glfw.GLFW.glfwGetCurrentContext;
 import static org.lwjgl.nanovg.NanoVG.nvgBeginFrame;
 import static org.lwjgl.nanovg.NanoVG.nvgEndFrame;
 import static org.lwjgl.nanovg.NanoVGGL3.NVG_ANTIALIAS;
@@ -32,6 +33,8 @@ public final class NanoVGRenderer implements AutoCloseable {
     private NvgCanvas canvas;
     private CircuitCanvasRenderer circuitRenderer;
     private EditorOverlayRenderer overlayRenderer;
+    private TextInputOverlay textInputOverlay;
+    private GlfwTextInputBridge textInputBridge;
     private final CursorFeedback cursorFeedback = new CursorFeedback();
     private final InteractionFeedbackResolver feedbackResolver = new InteractionFeedbackResolver();
 
@@ -45,6 +48,9 @@ public final class NanoVGRenderer implements AutoCloseable {
         canvas.loadFonts();
         circuitRenderer = new CircuitCanvasRenderer(canvas);
         overlayRenderer = new EditorOverlayRenderer(canvas);
+        textInputOverlay = new TextInputOverlay();
+        textInputBridge = new GlfwTextInputBridge(glfwGetCurrentContext(), textInputOverlay);
+        textInputBridge.install();
     }
 
     public void render(Viewport viewport, Camera2D camera, Circuit circuit, Toolbar toolbar, Tool tool,
@@ -58,12 +64,18 @@ public final class NanoVGRenderer implements AutoCloseable {
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         double timeSeconds = System.nanoTime() / 1_000_000_000.0;
+        if (textInputOverlay != null) {
+            textInputOverlay.update(viewport, mouseX, mouseY);
+        }
         PinRef hoveredPin = circuitRenderer.hoveredPin(camera, viewport, circuit, mouseX, mouseY);
         WireTargetFeedback targetFeedback = feedbackResolver.resolveWireTarget(camera, viewport, circuit,
                 pendingWire, hoveredPin, mouseX, mouseY);
-        cursorFeedback.apply(feedbackResolver.resolveCursor(toolbar, viewport, placementPreviews, selectedComponentIds,
+        CursorFeedback.Style cursorStyle = textInputOverlay != null && textInputOverlay.hovered()
+                ? CursorFeedback.Style.TEXT
+                : feedbackResolver.resolveCursor(toolbar, viewport, placementPreviews, selectedComponentIds,
                 hoveredComponentId, draggingComponent, hoveredPin, hoveredWireId, hoveredWireControlPointIndex,
-                draggingWireControlPoint, targetFeedback, mouseX, mouseY));
+                draggingWireControlPoint, targetFeedback, mouseX, mouseY);
+        cursorFeedback.apply(cursorStyle);
 
         Wire selectedWire = selectedWireId == null ? null : circuit.wireById(selectedWireId).orElse(null);
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
@@ -74,6 +86,9 @@ public final class NanoVGRenderer implements AutoCloseable {
         overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, draggingWireControlPoint,
                 simulationRunning, status, selectedComponentIds.size(), selectedWire, clipboardCount, chainVariantLabel,
                 undoCount, redoCount);
+        if (textInputOverlay != null) {
+            textInputOverlay.draw(canvas, viewport, timeSeconds);
+        }
         nvgEndFrame(vg);
     }
 
@@ -83,6 +98,11 @@ public final class NanoVGRenderer implements AutoCloseable {
 
     @Override
     public void close() {
+        if (textInputBridge != null) {
+            textInputBridge.close();
+            textInputBridge = null;
+        }
+        textInputOverlay = null;
         cursorFeedback.close();
         if (vg != NULL) {
             nvgDelete(vg);
