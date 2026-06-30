@@ -3,6 +3,8 @@ package dev.alexis.logika.graphics;
 import dev.alexis.logika.engine.Viewport;
 import dev.alexis.logika.model.Circuit;
 import dev.alexis.logika.model.PinRef;
+import dev.alexis.logika.model.Wire;
+import dev.alexis.logika.model.WireId;
 import dev.alexis.logika.ui.PlacementPreview;
 import dev.alexis.logika.ui.Tool;
 import dev.alexis.logika.ui.Toolbar;
@@ -48,8 +50,9 @@ public final class NanoVGRenderer implements AutoCloseable {
     public void render(Viewport viewport, Camera2D camera, Circuit circuit, Toolbar toolbar, Tool tool,
                        List<PlacementPreview> placementPreviews, PinRef pendingWire, Set<Integer> selectedComponentIds,
                        int hoveredComponentId, boolean draggingComponent, Rect selectionMarquee,
-                       boolean simulationRunning, String status, double mouseX, double mouseY, int clipboardCount,
-                       String chainVariantLabel, int undoCount, int redoCount) {
+                       WireId selectedWireId, WireId hoveredWireId, int hoveredWireControlPointIndex,
+                       boolean draggingWireControlPoint, boolean simulationRunning, String status, double mouseX, double mouseY,
+                       int clipboardCount, String chainVariantLabel, int undoCount, int redoCount) {
         glViewport(0, 0, viewport.framebufferWidth(), viewport.framebufferHeight());
         glClearColor(RenderTheme.BACKGROUND.rf(), RenderTheme.BACKGROUND.gf(), RenderTheme.BACKGROUND.bf(), 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -59,14 +62,18 @@ public final class NanoVGRenderer implements AutoCloseable {
         WireTargetFeedback targetFeedback = feedbackResolver.resolveWireTarget(camera, viewport, circuit,
                 pendingWire, hoveredPin, mouseX, mouseY);
         cursorFeedback.apply(feedbackResolver.resolveCursor(toolbar, viewport, placementPreviews, selectedComponentIds,
-                hoveredComponentId, draggingComponent, hoveredPin, targetFeedback, mouseX, mouseY));
+                hoveredComponentId, draggingComponent, hoveredPin, hoveredWireId, hoveredWireControlPointIndex,
+                draggingWireControlPoint, targetFeedback, mouseX, mouseY));
 
+        Wire selectedWire = selectedWireId == null ? null : circuit.wireById(selectedWireId).orElse(null);
         nvgBeginFrame(vg, viewport.windowWidth(), viewport.windowHeight(), (float) viewport.devicePixelRatio());
         canvas.fillRect(0, 0, viewport.windowWidth(), viewport.windowHeight(), RenderTheme.BACKGROUND);
         circuitRenderer.draw(camera, viewport, circuit, placementPreviews, selectedComponentIds, hoveredComponentId,
-                hoveredPin, pendingWire, targetFeedback, selectionMarquee, timeSeconds, mouseX, mouseY);
-        overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, simulationRunning, status,
-                selectedComponentIds.size(), clipboardCount, chainVariantLabel, undoCount, redoCount);
+                hoveredPin, pendingWire, selectedWireId, hoveredWireId, hoveredWireControlPointIndex,
+                targetFeedback, selectionMarquee, timeSeconds, mouseX, mouseY);
+        overlayRenderer.draw(toolbar, viewport, tool, pendingWire, draggingComponent, draggingWireControlPoint,
+                simulationRunning, status, selectedComponentIds.size(), selectedWire, clipboardCount, chainVariantLabel,
+                undoCount, redoCount);
         nvgEndFrame(vg);
     }
 
