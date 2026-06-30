@@ -26,6 +26,6 @@ mvn exec:java
 - Select one component: left click a component body.
 - Move selected components: drag any selected component body.
 - Link nodes: click one node, then click a compatible node.
-- Text bar: click the upper text bar, type Unicode text, use arrows/Home/End, Backspace/Delete, `Ctrl+A/C/X/V`, `Enter` to validate, or `Esc` to cancel.
+- Text bar: click or drag in the upper text field, use `Shift` + arrows/Home/End for range selection, `Ctrl+A/C/X/V`, focused text undo/redo, `Enter` to validate, or `Esc` to cancel.
 
 See [`docs/CONTROLS.md`](docs/CONTROLS.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/RESEARCH_NOTES.md`](docs/RESEARCH_NOTES.md), and [`docs/UI_UX_PLAN.md`](docs/UI_UX_PLAN.md).
