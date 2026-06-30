@@ -18,7 +18,8 @@ public final class UiMetrics {
     public static final double WIRE_HOVER_HALO_WIDTH_SCREEN = 15.0;
     public static final double WIRE_SELECTED_HALO_WIDTH_SCREEN = 24.0;
     public static final double WIRE_CONTROL_POINT_RADIUS_SCREEN = 11.0;
-    public static final double WIRE_CONTROL_POINT_SELECT_RADIUS_SCREEN = 18.0;
+    public static final double WIRE_CONTROL_POINT_SELECT_RADIUS_SCREEN = 34.0;
+    public static final double WIRE_CONTROL_POINT_HOVER_GLOW_SCREEN = 32.0;
     public static final int WIRE_SELECT_SAMPLES_PER_SEGMENT = 28;
 
     public static final double COMPONENT_PADDING_SCREEN = 22.0;
