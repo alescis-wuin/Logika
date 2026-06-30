@@ -14,6 +14,14 @@ public final class UiMetrics {
     public static final double PIN_RING_PADDING_SCREEN = 5.0;
     public static final double PIN_HIT_RADIUS_SCREEN = 94.0;
 
+    public static final double WIRE_SELECT_RADIUS_SCREEN = 22.0;
+    public static final double WIRE_HOVER_HALO_WIDTH_SCREEN = 15.0;
+    public static final double WIRE_SELECTED_HALO_WIDTH_SCREEN = 24.0;
+    public static final double WIRE_CONTROL_POINT_RADIUS_SCREEN = 11.0;
+    public static final double WIRE_CONTROL_POINT_SELECT_RADIUS_SCREEN = 34.0;
+    public static final double WIRE_CONTROL_POINT_HOVER_GLOW_SCREEN = 32.0;
+    public static final int WIRE_SELECT_SAMPLES_PER_SEGMENT = 28;
+
     public static final double COMPONENT_PADDING_SCREEN = 22.0;
     public static final double COMPONENT_RADIUS_SCREEN = 28.0;
     public static final double COMPONENT_COLLISION_GAP_WORLD = 16.0;
@@ -30,6 +38,9 @@ public final class UiMetrics {
     public static final double TOOLBAR_ITEM_HEIGHT_SCREEN = 76.0;
     public static final double TOOLBAR_ITEM_GAP_SCREEN = 14.0;
     public static final double TOOLBAR_ITEM_TOP_PADDING_SCREEN = 22.0;
+
+    public static final double WIRE_INSPECTOR_WIDTH_SCREEN = 350.0;
+    public static final double WIRE_INSPECTOR_MARGIN_SCREEN = 18.0;
 
     private UiMetrics() {
     }

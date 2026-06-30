@@ -83,13 +83,61 @@ public final class Circuit {
             return ConnectResult.fail("Invalid input.");
         }
 
-        Wire candidate = new Wire(start, end);
-        if (wires.contains(candidate)) {
+        WireId candidate = new WireId(start, end);
+        if (hasWire(candidate)) {
             return ConnectResult.fail("Already linked.");
         }
         wires.removeIf(existing -> existing.to().equals(end));
-        wires.add(candidate);
+        wires.add(new Wire(start, end));
         return ConnectResult.ok("Connected.");
+    }
+
+    public Optional<Wire> wireById(WireId id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return wires.stream().filter(wire -> wire.sameEndpoints(id)).findFirst();
+    }
+
+    public boolean hasWire(PinRef from, PinRef to) {
+        return hasWire(new WireId(from, to));
+    }
+
+    public boolean hasWire(WireId id) {
+        return wireById(id).isPresent();
+    }
+
+    public boolean replaceWire(Wire wire) {
+        int index = wireIndex(wire.id());
+        if (index < 0) {
+            return false;
+        }
+        wires.set(index, wire);
+        return true;
+    }
+
+    public boolean removeWire(WireId id) {
+        return wires.removeIf(wire -> wire.sameEndpoints(id));
+    }
+
+    public boolean setWireColor(WireId id, int colorRgb) {
+        Optional<Wire> wire = wireById(id);
+        return wire.isPresent() && replaceWire(wire.get().withColor(colorRgb));
+    }
+
+    public boolean configureWire(WireId id, int colorRgb, List<Vec2> controlPoints) {
+        Optional<Wire> wire = wireById(id);
+        return wire.isPresent() && replaceWire(new Wire(wire.get().from(), wire.get().to(), colorRgb, controlPoints));
+    }
+
+    public boolean addWireControlPoint(WireId id, int insertIndex, Vec2 point) {
+        Optional<Wire> wire = wireById(id);
+        return wire.isPresent() && replaceWire(wire.get().withInsertedControlPoint(insertIndex, point));
+    }
+
+    public boolean moveWireControlPoint(WireId id, int pointIndex, Vec2 point) {
+        Optional<Wire> wire = wireById(id);
+        return wire.isPresent() && replaceWire(wire.get().withMovedControlPoint(pointIndex, point));
     }
 
     public Optional<Vec2> pinPosition(PinRef ref) {
@@ -143,6 +191,15 @@ public final class Circuit {
         components.clear();
         wires.clear();
         nextComponentId = 1;
+    }
+
+    private int wireIndex(WireId id) {
+        for (int i = 0; i < wires.size(); i++) {
+            if (wires.get(i).sameEndpoints(id)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public record Snapshot(List<ComponentSnapshot> components, List<Wire> wires, int nextComponentId) {
