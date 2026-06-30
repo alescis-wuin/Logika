@@ -28,11 +28,25 @@ Placement remains armed while interacting with component bodies, pins, switches,
 | Link nodes | Click one node, then click a compatible node; output-first and input-first are both accepted |
 | Delete component(s) | Hover trash icon, or press `Delete` for the current selection |
 
+## Text input
+
+The upper text bar is an editor-level input surface intended for future component names, cable labels, and free text placement. While focused, it consumes text-related keyboard input so global editor shortcuts do not fire accidentally.
+
+| Action | Input |
+|---|---|
+| Focus text bar | Left click the upper text bar |
+| Type text | Keyboard text input; GLFW character callbacks provide Unicode code points |
+| Move caret | `Left`, `Right`, `Home`, `End` |
+| Delete text | `Backspace`, `Delete` |
+| Clipboard | `Ctrl+A`, `Ctrl+C`, `Ctrl+X`, `Ctrl+V` |
+| Validate | `Enter` |
+| Cancel edit | `Esc` |
+
 ## Visual feedback
 
 | Feedback | Behavior |
 |---|---|
-| Hover cursor | Changes over toolbar actions, components, placement slots, pins, and selected blocks |
+| Hover cursor | Changes over toolbar actions, components, placement slots, pins, selected blocks, and the text bar |
 | Pending wire preview | Drawn from the selected pin to the pointer and visually snaps to the probable compatible target pin |
 | Target halo | Pulses around the nearest compatible pin or around a rejected hovered target |
 | Connection success | A short pulse travels along newly created wires |
