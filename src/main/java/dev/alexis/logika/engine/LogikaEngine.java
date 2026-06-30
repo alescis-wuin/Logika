@@ -71,6 +71,9 @@ public final class LogikaEngine {
     private EditorSnapshot colorEditStartSnapshot;
     private boolean simulationRunning = true;
     private String status = "Interact directly, select blocks, choose a placement tool, or edit cable curves.";
+    private List<ClipboardComponent> clipboardComponents = List.of();
+    private List<ClipboardWire> clipboardWires = List.of();
+    private int pasteSequence;
 
     public void run() {
         try {
@@ -115,7 +118,7 @@ public final class LogikaEngine {
             renderer.render(viewport, camera, circuit, toolbar, tool, placementPreviews(), pendingWire, selectedComponentIds,
                     hoveredComponentId, draggingComponent, activeSelectionRect(), selectedWireId, hoveredWireId,
                     hoveredWireControlPointIndex, draggingWireControlPoint, simulationRunning, status, input.mouseX(),
-                    input.mouseY(), 0, "Off", undoStack.size(), redoStack.size());
+                    input.mouseY(), clipboardComponents.size(), "Off", undoStack.size(), redoStack.size());
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
@@ -507,6 +510,131 @@ public final class LogikaEngine {
         return marqueeSelecting ? normalizedRect(marqueeStartWorld, marqueeEndWorld) : null;
     }
 
+    private boolean copySelection() {
+        if (selectedComponentIds.isEmpty()) {
+            status = "Nothing selected to copy.";
+            audio.playClick(false);
+            return false;
+        }
+        List<ClipboardComponent> components = new ArrayList<>();
+        for (CircuitComponent component : circuit.components()) {
+            if (selectedComponentIds.contains(component.id())) {
+                components.add(new ClipboardComponent(component.id(), component.kind(), component.center(), component.sourceActive()));
+            }
+        }
+        List<ClipboardWire> wires = new ArrayList<>();
+        for (Wire wire : circuit.wires()) {
+            if (selectedComponentIds.contains(wire.from().componentId()) && selectedComponentIds.contains(wire.to().componentId())) {
+                wires.add(new ClipboardWire(wire.from().componentId(), wire.from().index(), wire.to().componentId(),
+                        wire.to().index(), wire.colorRgb(), wire.controlPoints()));
+            }
+        }
+        clipboardComponents = List.copyOf(components);
+        clipboardWires = List.copyOf(wires);
+        pasteSequence = 0;
+        status = "Copied " + clipboardComponents.size() + " component(s) and " + clipboardWires.size() + " internal cable(s).";
+        audio.playClick(true);
+        return true;
+    }
+
+    private void cutSelection() {
+        if (selectedComponentIds.isEmpty()) {
+            status = "Nothing selected to cut.";
+            audio.playClick(false);
+            return;
+        }
+        if (!copySelection()) return;
+        deleteSelectedComponentsOnly("Cut selection", "Cut");
+    }
+
+    private void pasteClipboard() {
+        if (clipboardComponents.isEmpty()) {
+            status = "Clipboard is empty.";
+            audio.playClick(false);
+            return;
+        }
+        Vec2 copyAnchor = clipboardAnchor();
+        Vec2 offset = choosePasteOffset(copyAnchor);
+        if (pasteWouldCollide(offset)) {
+            status = "Paste blocked: no nearby free space found.";
+            audio.playClick(false);
+            return;
+        }
+        EditorSnapshot before = snapshotEditor();
+        Map<Integer, Integer> idMap = new HashMap<>();
+        Set<Integer> pastedIds = new LinkedHashSet<>();
+        for (ClipboardComponent item : clipboardComponents) {
+            CircuitComponent pasted = circuit.addComponent(item.kind(), snap(item.center().add(offset)));
+            pasted.setSourceActive(item.sourceActive());
+            idMap.put(item.sourceId(), pasted.id());
+            pastedIds.add(pasted.id());
+        }
+        for (ClipboardWire wire : clipboardWires) {
+            Integer fromId = idMap.get(wire.fromComponentId());
+            Integer toId = idMap.get(wire.toComponentId());
+            if (fromId != null && toId != null) {
+                PinRef from = new PinRef(fromId, PinDirection.OUTPUT, wire.fromIndex());
+                PinRef to = new PinRef(toId, PinDirection.INPUT, wire.toIndex());
+                if (circuit.connect(from, to).success()) {
+                    circuit.configureWire(new WireId(from, to), wire.colorRgb(), shiftedControlPoints(wire, offset));
+                }
+            }
+        }
+        selectedComponentIds.clear();
+        selectedComponentIds.addAll(pastedIds);
+        syncPrimarySelection();
+        selectedWireId = null;
+        pendingWire = null;
+        tool = Tool.INTERACT;
+        pasteSequence++;
+        recordEdit("Paste block", before);
+        status = "Pasted " + pastedIds.size() + " component(s) with preserved internal wiring.";
+        audio.playClick(true);
+    }
+
+    private void duplicateSelection() {
+        if (selectedComponentIds.isEmpty()) {
+            status = "Nothing selected to duplicate.";
+            audio.playClick(false);
+            return;
+        }
+        if (copySelection()) pasteClipboard();
+    }
+
+    private Vec2 clipboardAnchor() {
+        double minX = Double.POSITIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        for (ClipboardComponent component : clipboardComponents) {
+            minX = Math.min(minX, component.center().x());
+            minY = Math.min(minY, component.center().y());
+        }
+        return new Vec2(minX, minY);
+    }
+
+    private Vec2 choosePasteOffset(Vec2 copyAnchor) {
+        Vec2 mouse = snap(mouseWorld());
+        Vec2 offset = mouse.subtract(copyAnchor).add(new Vec2(pasteSequence * UiMetrics.GRID_SIZE, pasteSequence * UiMetrics.GRID_SIZE));
+        for (int attempt = 0; attempt < 16; attempt++) {
+            if (!pasteWouldCollide(offset)) return offset;
+            offset = offset.add(new Vec2(UiMetrics.GRID_SIZE, UiMetrics.GRID_SIZE));
+        }
+        return offset;
+    }
+
+    private boolean pasteWouldCollide(Vec2 offset) {
+        for (ClipboardComponent item : clipboardComponents) {
+            if (collidesWithExistingComponent(componentBounds(item.kind(), snap(item.center().add(offset))))) return true;
+        }
+        return false;
+    }
+
+    private List<Vec2> shiftedControlPoints(ClipboardWire wire, Vec2 offset) {
+        if (wire.controlPoints().isEmpty()) return List.of();
+        List<Vec2> shifted = new ArrayList<>(wire.controlPoints().size());
+        for (Vec2 point : wire.controlPoints()) shifted.add(point.add(offset));
+        return shifted;
+    }
+
     private Optional<WireHit> wireHitAt(Vec2 world) {
         double radiusWorld = UiMetrics.WIRE_SELECT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
         WireHit best = null;
@@ -621,7 +749,17 @@ public final class LogikaEngine {
                 status = simulationRunning ? "Simulation resumed." : "Simulation paused.";
                 audio.playClick(simulationRunning);
             }
-            case GLFW_KEY_C -> { if (!shortcut) { camera.reset(); updateHoverState(); status = "Camera re-centered."; } }
+            case GLFW_KEY_C -> {
+                if (shortcut) copySelection();
+                else {
+                    camera.reset();
+                    updateHoverState();
+                    status = "Camera re-centered.";
+                }
+            }
+            case GLFW_KEY_X -> { if (shortcut) cutSelection(); }
+            case GLFW_KEY_V -> { if (shortcut) pasteClipboard(); }
+            case GLFW_KEY_D -> { if (shortcut) duplicateSelection(); }
             case GLFW_KEY_Z -> { if (shortcut && (mods & GLFW_MOD_SHIFT) != 0) redo(); else if (shortcut) undo(); }
             case GLFW_KEY_Y -> { if (shortcut) redo(); }
             case GLFW_KEY_1 -> setTool(Tool.PLACE_BUTTON);
@@ -692,6 +830,7 @@ public final class LogikaEngine {
     }
 
     private void deleteSelection() {
+        if (deleteSelectedComponentsOnly("Delete selection", "Deleted")) return;
         if (selectedWireId != null) {
             EditorSnapshot before = snapshotEditor();
             if (circuit.removeWire(selectedWireId)) {
@@ -702,22 +841,26 @@ public final class LogikaEngine {
                 return;
             }
         }
-        if (selectedComponentIds.isEmpty()) {
-            status = "Nothing selected to delete.";
-            audio.playClick(false);
-            return;
-        }
+        status = "Nothing selected to delete.";
+        audio.playClick(false);
+    }
+
+    private boolean deleteSelectedComponentsOnly(String label, String verb) {
+        if (selectedComponentIds.isEmpty()) return false;
         EditorSnapshot before = snapshotEditor();
         List<Integer> ids = new ArrayList<>(selectedComponentIds);
-        for (int id : ids) circuit.removeComponent(id);
+        if (ids.contains(pressedButtonId)) pressedButtonId = -1;
+        circuit.removeComponents(ids);
         clearSelection();
-        clearWireSelectionOnly();
         pendingWire = null;
         dragCandidateId = -1;
         draggingComponent = false;
-        recordEdit("Delete selection", before);
-        status = ids.size() == 1 ? "Component deleted." : ids.size() + " components deleted.";
+        hoveredComponentId = -1;
+        if (selectedWireId != null && circuit.wireById(selectedWireId).isEmpty()) selectedWireId = null;
+        recordEdit(label, before);
+        status = ids.size() == 1 ? verb + " 1 component." : verb + " " + ids.size() + " components.";
         audio.playClick(false);
+        return true;
     }
 
     private void deleteComponent(int id, String label) {
@@ -726,7 +869,7 @@ public final class LogikaEngine {
         circuit.removeComponent(id);
         selectedComponentIds.remove(id);
         syncPrimarySelection();
-        clearWireSelectionOnly();
+        if (selectedWireId != null && circuit.wireById(selectedWireId).isEmpty()) selectedWireId = null;
         pendingWire = null;
         recordEdit(label, before);
         status = "Component deleted.";
@@ -1007,6 +1150,9 @@ public final class LogikaEngine {
         if (callback != null) callback.free();
     }
 
+    private record ClipboardComponent(int sourceId, ComponentKind kind, Vec2 center, boolean sourceActive) { }
+    private record ClipboardWire(int fromComponentId, int fromIndex, int toComponentId, int toIndex,
+                                 int colorRgb, List<Vec2> controlPoints) { }
     private record EditorSnapshot(Circuit.Snapshot circuit, List<Integer> selectedIds, WireId selectedWireId, PinRef pendingWire, Tool tool) { }
     private record UndoableEdit(String label, EditorSnapshot before, EditorSnapshot after) { }
     private record PlacementCandidate(Vec2 center, String label, PlacementSide side, Rect slotBounds) { }
