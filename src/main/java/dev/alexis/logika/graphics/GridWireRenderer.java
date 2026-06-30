@@ -15,6 +15,7 @@ final class GridWireRenderer {
     private static final double SIGNAL_SPEED = 0.66;
     private static final double SIGNAL_HALF_WIDTH = 0.17;
     private static final int SIGNAL_SEGMENTS = 44;
+    private static final double POINT_BREATHING_SPEED = 6.2;
     private final NvgCanvas canvas;
 
     GridWireRenderer(NvgCanvas canvas) {
@@ -41,7 +42,7 @@ final class GridWireRenderer {
                                 WireId selectedWireId, int hoveredControlPointIndex, double timeSeconds) {
         drawSignalNodePulses(camera, viewport, circuit, timeSeconds);
         drawTargetHalo(camera, viewport, circuit, targetFeedback, timeSeconds);
-        drawSelectedWireControlPoints(camera, viewport, circuit, selectedWireId, hoveredControlPointIndex);
+        drawSelectedWireControlPoints(camera, viewport, circuit, selectedWireId, hoveredControlPointIndex, timeSeconds);
     }
 
     private void drawGrid(Camera2D camera, Viewport viewport) {
@@ -179,7 +180,7 @@ final class GridWireRenderer {
     }
 
     private void drawSelectedWireControlPoints(Camera2D camera, Viewport viewport, Circuit circuit, WireId selectedWireId,
-                                               int hoveredControlPointIndex) {
+                                               int hoveredControlPointIndex, double timeSeconds) {
         if (selectedWireId == null) return;
         Optional<Wire> selected = circuit.wireById(selectedWireId);
         if (selected.isEmpty()) return;
@@ -187,10 +188,17 @@ final class GridWireRenderer {
         for (int i = 0; i < points.size(); i++) {
             Vec2 screen = camera.worldToScreen(points.get(i), viewport);
             boolean hovered = i == hoveredControlPointIndex;
-            double radius = UiMetrics.WIRE_CONTROL_POINT_RADIUS_SCREEN + (hovered ? 4.0 : 0.0);
-            canvas.circle(screen.x(), screen.y(), radius + 9.0, RenderTheme.ACCENT.withAlpha(hovered ? 90 : 52));
+            double breath = hovered ? 0.5 + 0.5 * Math.sin(timeSeconds * POINT_BREATHING_SPEED) : 0.0;
+            double radius = UiMetrics.WIRE_CONTROL_POINT_RADIUS_SCREEN + (hovered ? 4.0 + breath * 2.0 : 0.0);
+            if (hovered) {
+                double glow = UiMetrics.WIRE_CONTROL_POINT_HOVER_GLOW_SCREEN + breath * 12.0;
+                canvas.circle(screen.x(), screen.y(), glow, RenderTheme.ACCENT.withAlpha((int) Math.round(54.0 + breath * 70.0)));
+                canvas.strokeCircle(screen.x(), screen.y(), glow * 0.64, RenderTheme.TEXT.withAlpha((int) Math.round(116.0 + breath * 80.0)), (float) (1.8 + breath * 1.8));
+            } else {
+                canvas.circle(screen.x(), screen.y(), radius + 9.0, RenderTheme.ACCENT.withAlpha(52));
+            }
             canvas.circle(screen.x(), screen.y(), radius, new RenderTheme.Rgba(18, 30, 52, 246));
-            canvas.strokeCircle(screen.x(), screen.y(), radius, hovered ? RenderTheme.TEXT : RenderTheme.ACCENT, hovered ? 3.0f : 2.2f);
+            canvas.strokeCircle(screen.x(), screen.y(), radius, hovered ? RenderTheme.TEXT : RenderTheme.ACCENT, hovered ? 3.2f : 2.2f);
             canvas.text(String.valueOf(i + 1), (float) screen.x(), (float) screen.y(), 13.0f, NVG_ALIGN_CENTER, RenderTheme.TEXT, true);
         }
     }
