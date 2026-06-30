@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import static org.lwjgl.glfw.GLFW.GLFW_CROSSHAIR_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_IBEAM_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_NOT_ALLOWED_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_POINTING_HAND_CURSOR;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZE_ALL_CURSOR;
@@ -26,6 +27,7 @@ final class CursorFeedback implements AutoCloseable {
         cursors.put(Style.WIRE, glfwCreateStandardCursor(GLFW_CROSSHAIR_CURSOR));
         cursors.put(Style.FORBIDDEN, glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR));
         cursors.put(Style.MOVE, glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR));
+        cursors.put(Style.TEXT, glfwCreateStandardCursor(GLFW_IBEAM_CURSOR));
         initialized = true;
     }
 
@@ -59,6 +61,7 @@ final class CursorFeedback implements AutoCloseable {
         HAND,
         WIRE,
         FORBIDDEN,
-        MOVE
+        MOVE,
+        TEXT
     }
 }
