@@ -56,6 +56,10 @@ public final class LogikaEngine {
     private double pressScreenX;
     private double pressScreenY;
     private EditorSnapshot dragStartSnapshot;
+    private boolean marqueeCandidate;
+    private boolean marqueeSelecting;
+    private Vec2 marqueeStartWorld = new Vec2(0.0, 0.0);
+    private Vec2 marqueeEndWorld = new Vec2(0.0, 0.0);
     private WireId selectedWireId;
     private WireId hoveredWireId;
     private int hoveredWireControlPointIndex = -1;
@@ -109,9 +113,9 @@ public final class LogikaEngine {
         while (!glfwWindowShouldClose(window)) {
             if (simulationRunning) simulator.tick(circuit);
             renderer.render(viewport, camera, circuit, toolbar, tool, placementPreviews(), pendingWire, selectedComponentIds,
-                    hoveredComponentId, draggingComponent, null, selectedWireId, hoveredWireId, hoveredWireControlPointIndex,
-                    draggingWireControlPoint, simulationRunning, status, input.mouseX(), input.mouseY(), 0, "Off",
-                    undoStack.size(), redoStack.size());
+                    hoveredComponentId, draggingComponent, activeSelectionRect(), selectedWireId, hoveredWireId,
+                    hoveredWireControlPointIndex, draggingWireControlPoint, simulationRunning, status, input.mouseX(),
+                    input.mouseY(), 0, "Off", undoStack.size(), redoStack.size());
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
@@ -131,6 +135,7 @@ public final class LogikaEngine {
             if (input.leftDown() && editingWireColor) updateWireColorFromPointer();
             else if (input.leftDown() && draggedWireId != null) updateWireControlPointDrag(x, y);
             else if (input.leftDown() && dragCandidateId != -1) updateComponentDrag(x, y);
+            else if (input.leftDown() && marqueeCandidate) updateMarqueeSelection(x, y);
             updateHoverState();
         });
         glfwSetScrollCallback(window, (handle, offsetX, offsetY) -> {
@@ -222,10 +227,7 @@ public final class LogikaEngine {
             placeFromEmptyCanvas(world);
             return;
         }
-        clearSelection();
-        clearWireSelectionOnly();
-        pendingWire = null;
-        status = "Empty grid selected.";
+        beginMarqueeSelection(world);
     }
 
     private void handlePrimaryRelease() {
@@ -238,6 +240,7 @@ public final class LogikaEngine {
             } else if (!componentPressSelectionOnly) component.ifPresent(this::performComponentClick);
             else status = selectionSummary();
         }
+        if (marqueeCandidate) finishMarqueeSelection();
         if (draggedWireId != null) {
             if (draggingWireControlPoint && wireDragStartSnapshot != null) recordEdit("Move cable curve point", wireDragStartSnapshot);
             draggedWireId = null;
@@ -457,6 +460,53 @@ public final class LogikaEngine {
         updateHoverState();
     }
 
+    private void beginMarqueeSelection(Vec2 world) {
+        marqueeCandidate = true;
+        marqueeSelecting = false;
+        marqueeStartWorld = world;
+        marqueeEndWorld = world;
+        pressScreenX = input.mouseX();
+        pressScreenY = input.mouseY();
+        status = "Drag to select components. Cable selection is preserved.";
+    }
+
+    private void updateMarqueeSelection(double screenX, double screenY) {
+        double movement = Math.hypot(screenX - pressScreenX, screenY - pressScreenY);
+        if (!marqueeSelecting && movement > DRAG_THRESHOLD_PX) {
+            marqueeSelecting = true;
+            pendingWire = null;
+            tool = Tool.INTERACT;
+        }
+        if (marqueeSelecting) {
+            marqueeEndWorld = camera.screenToWorld(new Vec2(screenX, screenY), viewport);
+            status = "Selecting components inside the area.";
+        }
+    }
+
+    private void finishMarqueeSelection() {
+        if (!marqueeSelecting) {
+            marqueeCandidate = false;
+            status = selectedWireId == null ? "Empty grid selected." : "Cable selection preserved.";
+            return;
+        }
+        Rect selection = activeSelectionRect();
+        List<Integer> hits = new ArrayList<>();
+        for (CircuitComponent component : circuit.components()) {
+            if (selection != null && overlaps(selection, component.bounds())) hits.add(component.id());
+        }
+        selectedComponentIds.clear();
+        selectedComponentIds.addAll(hits);
+        syncPrimarySelection();
+        marqueeCandidate = false;
+        marqueeSelecting = false;
+        status = hits.isEmpty() ? "No component in selection area." : selectionSummary();
+        audio.playClick(!hits.isEmpty());
+    }
+
+    private Rect activeSelectionRect() {
+        return marqueeSelecting ? normalizedRect(marqueeStartWorld, marqueeEndWorld) : null;
+    }
+
     private Optional<WireHit> wireHitAt(Vec2 world) {
         double radiusWorld = UiMetrics.WIRE_SELECT_RADIUS_SCREEN / Math.max(0.18, camera.zoom());
         WireHit best = null;
@@ -583,7 +633,9 @@ public final class LogikaEngine {
     }
 
     private void cancelEditorState(String trigger) {
-        boolean hadState = pendingWire != null || tool != Tool.INTERACT || !selectedComponentIds.isEmpty() || selectedWireId != null || dragCandidateId != -1 || draggedWireId != null || editingWireColor;
+        boolean hadState = pendingWire != null || tool != Tool.INTERACT || !selectedComponentIds.isEmpty()
+                || selectedWireId != null || dragCandidateId != -1 || draggedWireId != null || editingWireColor
+                || marqueeCandidate || marqueeSelecting;
         if (draggingComponent && dragStartSnapshot != null) restoreEditor(dragStartSnapshot);
         else if (draggingWireControlPoint && wireDragStartSnapshot != null) restoreEditor(wireDragStartSnapshot);
         else if (pressedButtonId != -1) circuit.componentById(pressedButtonId).ifPresent(component -> component.setSourceActive(false));
@@ -599,6 +651,8 @@ public final class LogikaEngine {
         draggingComponent = false;
         draggingWireControlPoint = false;
         componentPressSelectionOnly = false;
+        marqueeCandidate = false;
+        marqueeSelecting = false;
         dragStartSnapshot = null;
         wireDragStartSnapshot = null;
         colorEditStartSnapshot = null;
@@ -610,7 +664,7 @@ public final class LogikaEngine {
     }
 
     private void updateHoverState() {
-        if (toolbar.contains(input.mouseY(), viewport.windowHeight()) || input.panning()) {
+        if (toolbar.contains(input.mouseY(), viewport.windowHeight()) || input.panning() || marqueeSelecting) {
             hoveredComponentId = -1;
             hoveredWireId = null;
             hoveredWireControlPointIndex = -1;
@@ -836,6 +890,8 @@ public final class LogikaEngine {
         editingWireColor = false;
         draggingComponent = false;
         componentPressSelectionOnly = false;
+        marqueeCandidate = false;
+        marqueeSelecting = false;
         dragStartSnapshot = null;
         wireDragStartSnapshot = null;
         colorEditStartSnapshot = null;
@@ -911,6 +967,7 @@ public final class LogikaEngine {
     private static boolean oppositeDirections(PinRef a, PinRef b) { return a.direction() != b.direction(); }
     private static boolean hasShortcutModifier(int mods) { return (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER)) != 0; }
     private static boolean hasSelectionModifier(int mods) { return (mods & (GLFW_MOD_SHIFT | GLFW_MOD_CONTROL | GLFW_MOD_SUPER)) != 0; }
+    private static Rect normalizedRect(Vec2 a, Vec2 b) { return new Rect(Math.min(a.x(), b.x()), Math.min(a.y(), b.y()), Math.abs(a.x() - b.x()), Math.abs(a.y() - b.y())); }
     private static Rect expand(Rect rect, double amount) { return new Rect(rect.x() - amount, rect.y() - amount, rect.width() + amount * 2.0, rect.height() + amount * 2.0); }
     private static boolean overlaps(Rect a, Rect b) { return a.x() < b.x() + b.width() && a.x() + a.width() > b.x() && a.y() < b.y() + b.height() && a.y() + a.height() > b.y(); }
 
