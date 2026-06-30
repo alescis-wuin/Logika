@@ -1,10 +1,12 @@
 package dev.alexis.logika.graphics;
 
+import dev.alexis.logika.model.WirePath;
 import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.lwjgl.nanovg.NanoVG.NVG_ALIGN_MIDDLE;
 import static org.lwjgl.nanovg.NanoVG.nvgBeginPath;
@@ -90,6 +92,22 @@ final class NvgCanvas {
         nvgMoveTo(vg, (float) x1, (float) y1);
         nvgBezierTo(vg, (float) (x1 + control), (float) y1, (float) (x2 - control), (float) y2,
                 (float) x2, (float) y2);
+        stroke(color, strokeWidth);
+    }
+
+    void bezierPath(List<WirePath.Segment> segments, RenderTheme.Rgba color, float strokeWidth) {
+        if (segments.isEmpty()) {
+            return;
+        }
+        WirePath.Segment first = segments.get(0);
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, (float) first.start().x(), (float) first.start().y());
+        for (WirePath.Segment segment : segments) {
+            nvgBezierTo(vg,
+                    (float) segment.controlA().x(), (float) segment.controlA().y(),
+                    (float) segment.controlB().x(), (float) segment.controlB().y(),
+                    (float) segment.end().x(), (float) segment.end().y());
+        }
         stroke(color, strokeWidth);
     }
 
