@@ -17,7 +17,18 @@ final class RenderTheme {
     private RenderTheme() {
     }
 
+    static Rgba fromRgb(int rgb, int alpha) {
+        return new Rgba((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, alpha);
+    }
+
     record Rgba(int r, int g, int b, int a) {
+        Rgba {
+            r = clampChannel(r);
+            g = clampChannel(g);
+            b = clampChannel(b);
+            a = clampChannel(a);
+        }
+
         float rf() {
             return r / 255.0f;
         }
@@ -31,7 +42,39 @@ final class RenderTheme {
         }
 
         Rgba withAlpha(int alpha) {
-            return new Rgba(r, g, b, Math.max(0, Math.min(255, alpha)));
+            return new Rgba(r, g, b, alpha);
+        }
+
+        Rgba brighten(double amount) {
+            double t = clamp(amount, 0.0, 1.0);
+            return new Rgba(
+                    (int) Math.round(r + (255 - r) * t),
+                    (int) Math.round(g + (255 - g) * t),
+                    (int) Math.round(b + (255 - b) * t),
+                    a);
+        }
+
+        Rgba darken(double amount) {
+            double t = 1.0 - clamp(amount, 0.0, 1.0);
+            return new Rgba((int) Math.round(r * t), (int) Math.round(g * t), (int) Math.round(b * t), a);
+        }
+
+        Rgba mix(Rgba other, double amount) {
+            double t = clamp(amount, 0.0, 1.0);
+            double u = 1.0 - t;
+            return new Rgba(
+                    (int) Math.round(r * u + other.r * t),
+                    (int) Math.round(g * u + other.g * t),
+                    (int) Math.round(b * u + other.b * t),
+                    (int) Math.round(a * u + other.a * t));
+        }
+
+        private static int clampChannel(int value) {
+            return Math.max(0, Math.min(255, value));
+        }
+
+        private static double clamp(double value, double min, double max) {
+            return Math.max(min, Math.min(max, value));
         }
     }
 }
