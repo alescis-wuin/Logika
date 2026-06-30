@@ -30,23 +30,28 @@ Placement remains armed while interacting with component bodies, pins, switches,
 
 ## Text input
 
-The upper text bar is an editor-level input surface intended for future component names, cable labels, and free text placement. While focused, it consumes text-related keyboard input so global editor shortcuts do not fire accidentally.
+The upper text field is an editor-level input surface intended for future component names, cable labels, and free text placement. While focused, it consumes text-related keyboard input so global editor shortcuts do not fire accidentally.
 
 | Action | Input |
 |---|---|
-| Focus text bar | Left click the upper text bar |
+| Focus text field | Left click the upper input field |
 | Type text | Keyboard text input; GLFW character callbacks provide Unicode code points |
 | Move caret | `Left`, `Right`, `Home`, `End` |
-| Delete text | `Backspace`, `Delete` |
-| Clipboard | `Ctrl+A`, `Ctrl+C`, `Ctrl+X`, `Ctrl+V` |
+| Extend selection | `Shift` + `Left`/`Right`/`Home`/`End` |
+| Select by pointer | Click-drag inside the input field |
+| Select all | `Ctrl+A` |
+| Clipboard | `Ctrl+C`, `Ctrl+X`, `Ctrl+V` |
+| Text history | Undo and redo while the field is focused |
 | Validate | `Enter` |
 | Cancel edit | `Esc` |
+
+The optional title above the input field is hidden by default and can be enabled with the `logika.textInput.showTitle` system property.
 
 ## Visual feedback
 
 | Feedback | Behavior |
 |---|---|
-| Hover cursor | Changes over toolbar actions, components, placement slots, pins, selected blocks, and the text bar |
+| Hover cursor | Changes over toolbar actions, components, placement slots, pins, selected blocks, and the text field |
 | Pending wire preview | Drawn from the selected pin to the pointer and visually snaps to the probable compatible target pin |
 | Target halo | Pulses around the nearest compatible pin or around a rejected hovered target |
 | Connection success | A short pulse travels along newly created wires |
